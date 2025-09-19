@@ -1,0 +1,7 @@
+
+# Claude Configuration (IP separated)
+.claude-defaults/
+.claude/
+.claude_*
+.gitmodules
+CLAUDE.md
