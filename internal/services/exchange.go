@@ -2,14 +2,18 @@ package services
 
 import (
 	"github.com/sirupsen/logrus"
+
+	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/config"
 )
 
 type ExchangeService struct {
+	config *config.Config
 	logger *logrus.Logger
 }
 
-func NewExchangeService(logger *logrus.Logger) *ExchangeService {
+func NewExchangeService(cfg *config.Config, logger *logrus.Logger) *ExchangeService {
 	return &ExchangeService{
+		config: cfg,
 		logger: logger,
 	}
 }

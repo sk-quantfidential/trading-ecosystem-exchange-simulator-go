@@ -1,5 +1,44 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Claude Configuration (IP separated)
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Build artifacts
+exchange-simulator
+exchange-simulator-go
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Configuration files (should be provided via environment/deployment)
+*.env
+config.local.yaml
+config.local.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Claude Configuration (already present)
 .claude-defaults/
 .claude/
 .claude_*
