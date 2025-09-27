@@ -19,18 +19,30 @@
 ---
 
 ### 🔗 Milestone TSE-0001.3b: Go Services gRPC Integration
-**Status**: Not Started
+**Status**: Phase 1 in Progress (Following custodian-simulator-go pattern)
 **Priority**: High
 
-**Tasks**:
-- [ ] Implement gRPC server with health service
-- [ ] Service registration with Redis-based discovery
-- [ ] Configuration service client integration
-- [ ] Inter-service communication testing
+**Tasks** (Following proven TDD Red-Green-Refactor cycle):
+- [x] **Phase 1: TDD Red** - Create failing tests for all gRPC integration behaviors
+- [ ] **Phase 2: Infrastructure** - Add Redis dependencies and update .gitignore for Go projects
+- [ ] **Phase 3: gRPC Server** - Implement enhanced gRPC server with health service, metrics, and graceful shutdown
+- [ ] **Phase 4: Configuration** - Implement configuration service client with HTTP caching, TTL, and type conversion
+- [ ] **Phase 5: Discovery** - Implement service discovery with Redis-based registry, heartbeat, and cleanup
+- [ ] **Phase 6: Communication** - Create inter-service gRPC client manager with connection pooling and circuit breaker
+- [ ] **Phase 7: Integration** - Implement comprehensive inter-service communication testing with smart skipping
+- [ ] **Phase 8: Validation** - Verify BDD acceptance and complete milestone documentation
+
+**Implementation Pattern** (Replicating custodian-simulator-go success):
+- **Infrastructure Layer**: Configuration client, service discovery, gRPC clients
+- **Presentation Layer**: Enhanced gRPC server with health service
+- **Testing Strategy**: Unit tests with smart dependency skipping, integration tests for end-to-end scenarios
+- **Error Handling**: Graceful degradation, circuit breaker patterns, comprehensive logging
 
 **BDD Acceptance**: Go services can discover and communicate with each other via gRPC
 
 **Dependencies**: TSE-0001.1a (Go Services Bootstrapping), TSE-0001.3a (Core Infrastructure)
+
+**Reference Implementation**: custodian-simulator-go (✅ COMPLETED) - Use as pattern for architecture and testing
 
 ---
 
