@@ -1,4 +1,7 @@
-# Binaries for programs and plugins
+PULL_*.md
+PR_*.md
+
+# Go Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
@@ -10,6 +13,19 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Go coverage files
+*.coverprofile
+coverage.html
+coverage.out
+
+# Go vendor directory
+vendor/
+
+# Go module cache
+go.sum
+go.work
+go.work.sum
 
 # Build artifacts
 exchange-simulator
@@ -28,6 +44,7 @@ config.local.json
 .idea/
 *.swp
 *.swo
+*~
 
 # OS generated files
 .DS_Store
