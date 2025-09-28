@@ -28,10 +28,7 @@ func main() {
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	exchangeService := services.NewExchangeService(logger)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	exchangeService := services.NewExchangeService(cfg, logger)
 
 	grpcServer := setupGRPCServer(cfg, exchangeService, logger)
 	httpServer := setupHTTPServer(cfg, exchangeService, logger)
