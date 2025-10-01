@@ -1,3 +1,0 @@
-[submodule "proto"]
-	path = proto
-	url = git@github.com-sk-quantfidential:sk-quantfidential/financial-data-protobuf-schemas.git

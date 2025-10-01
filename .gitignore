@@ -1,7 +1,4 @@
-PULL_*.md
-PR_*.md
-
-# Go Binaries for programs and plugins
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
@@ -14,28 +11,30 @@ PR_*.md
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Go workspace file
+go.work
+go.work.sum
+
 # Go coverage files
 *.coverprofile
 coverage.html
 coverage.out
+profile.cov
 
 # Go vendor directory
 vendor/
 
-# Go module cache
-go.sum
-go.work
-go.work.sum
-
 # Build artifacts
 exchange-simulator
 exchange-simulator-go
+server
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Environment files (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
 
-# Configuration files (should be provided via environment/deployment)
-*.env
+# Local configuration files (DO NOT COMMIT SECRETS)
 config.local.yaml
 config.local.json
 
@@ -55,9 +54,18 @@ config.local.json
 ehthumbs.db
 Thumbs.db
 
-# Claude Configuration (already present)
+# Log files
+*.log
+logs/
+
+# Build artifacts
+/bin/
+/dist/
+
+# Claude Configuration (IP separated)
 .claude-defaults/
 .claude/
 .claude_*
 .gitmodules
 CLAUDE.md
+proto/

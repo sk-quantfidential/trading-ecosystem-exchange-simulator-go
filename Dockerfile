@@ -1,21 +1,34 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-RUN apk add --no-cache git ca-certificates
+# Copy exchange-data-adapter-go dependency
+COPY exchange-data-adapter-go/ ./exchange-data-adapter-go/
 
-COPY go.mod go.sum ./
+# Copy exchange-simulator-go files
+COPY exchange-simulator-go/go.mod exchange-simulator-go/go.sum ./exchange-simulator-go/
+WORKDIR /build/exchange-simulator-go
 RUN go mod download
 
-COPY . .
+# Copy source and build
+COPY exchange-simulator-go/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o exchange-simulator ./cmd/server
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
+# Runtime stage
+FROM alpine:3.19
 
-FROM scratch
+RUN apk --no-cache add ca-certificates wget
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/main /app/main
+WORKDIR /app
+COPY --from=builder /build/exchange-simulator-go/exchange-simulator /app/exchange-simulator
+RUN chown -R appuser:appgroup /app
 
-EXPOSE 8081 9091
+USER appuser
 
-CMD ["/app/main"]
+EXPOSE 8082 9092
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:8082/api/v1/health || exit 1
+
+CMD ["./exchange-simulator"]
