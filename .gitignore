@@ -1,7 +1,3 @@
-# Wrong PR file names
-PULL_*.md
-PR_*.md
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
