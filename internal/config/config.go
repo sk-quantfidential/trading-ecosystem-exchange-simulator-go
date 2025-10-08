@@ -8,6 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go/pkg/adapters"
+	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/domain/ports"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,6 +34,9 @@ type Config struct {
 
 	// Data Adapter
 	dataAdapter adapters.DataAdapter
+
+	// Metrics
+	metricsPort ports.MetricsPort
 }
 
 func Load() *Config {
@@ -89,6 +93,14 @@ func (c *Config) DisconnectDataAdapter(ctx context.Context) error {
 		return c.dataAdapter.Disconnect(ctx)
 	}
 	return nil
+}
+
+func (c *Config) SetMetricsPort(metricsPort ports.MetricsPort) {
+	c.metricsPort = metricsPort
+}
+
+func (c *Config) GetMetricsPort() ports.MetricsPort {
+	return c.metricsPort
 }
 
 func getEnv(key, defaultValue string) string {
