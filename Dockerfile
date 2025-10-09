@@ -26,7 +26,7 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8082 9092
+EXPOSE 8080 50051
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:8082/api/v1/health || exit 1

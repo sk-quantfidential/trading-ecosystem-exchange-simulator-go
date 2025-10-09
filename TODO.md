@@ -533,7 +533,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose ports
-EXPOSE 8085 9095
+EXPOSE 8080 50051
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
@@ -558,7 +558,7 @@ docker build -f exchange-simulator-go/Dockerfile -t exchange-simulator:latest .
 docker images exchange-simulator:latest
 
 # Test run
-docker run --rm -p 8085:8085 -p 9095:9095 \
+docker run --rm -p 8084:8080 -p 50054:50051 \
   -e POSTGRES_URL="postgres://exchange_adapter:exchange-adapter-db-pass@host.docker.internal:5432/trading_ecosystem" \
   -e REDIS_URL="redis://exchange-adapter:exchange-pass@host.docker.internal:6379/0" \
   exchange-simulator:latest

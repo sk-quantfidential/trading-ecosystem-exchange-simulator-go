@@ -257,7 +257,7 @@ func TestDataModels(t *testing.T) {
 		serviceInfo := infrastructure.ServiceInfo{
 			ServiceName: "test-service",
 			Host:        "localhost",
-			GRPCPort:    9090,
+			GRPCPort:    50051,
 			HTTPPort:    8080,
 			Version:     "1.0.0",
 			Environment: "test",
@@ -273,8 +273,8 @@ func TestDataModels(t *testing.T) {
 			t.Errorf("Expected service name 'test-service', got %s", serviceInfo.ServiceName)
 		}
 
-		if serviceInfo.GRPCPort != 9090 {
-			t.Errorf("Expected gRPC port 9090, got %d", serviceInfo.GRPCPort)
+		if serviceInfo.GRPCPort != 50051 {
+			t.Errorf("Expected gRPC port 50051, got %d", serviceInfo.GRPCPort)
 		}
 
 		if serviceInfo.Metadata["region"] != "us-east-1" {
