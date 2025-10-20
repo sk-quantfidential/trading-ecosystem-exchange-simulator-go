@@ -133,6 +133,52 @@ else
       fi
     else
       echo -e "${GREEN}✅ Found PR documentation: ${PR_FILES_FOUND[0]}${NC}"
+
+      # ============================================================================
+      # CHECK 4: Validate PR documentation content
+      # ============================================================================
+      echo ""
+      echo -e "${YELLOW}[4/7] Validating PR documentation content...${NC}"
+
+      PR_FILE="${PR_FILES_FOUND[0]}"
+      PR_WARNINGS=()
+
+      # Check for required sections
+      if ! grep -q "## Summary" "$PR_FILE"; then
+        PR_WARNINGS+=("Missing '## Summary' section")
+      fi
+
+      if ! grep -q "## Quality Assurance" "$PR_FILE" && ! grep -q "## Testing" "$PR_FILE"; then
+        PR_WARNINGS+=("Missing '## Quality Assurance' or '## Testing' section")
+      fi
+
+      if ! grep -q "## Files Changed" "$PR_FILE" && ! grep -q "## What Changed" "$PR_FILE" && ! grep -q "## Changes" "$PR_FILE"; then
+        PR_WARNINGS+=("Missing '## Files Changed', '## What Changed', or '## Changes' section")
+      fi
+
+      # Check for epic reference in PR file
+      if [[ -n "$EPIC_INFO" ]]; then
+        if ! grep -qi "$EPIC_INFO" "$PR_FILE"; then
+          PR_WARNINGS+=("Epic reference '$EPIC_INFO' not found in PR file")
+        fi
+      fi
+
+      # Check for placeholder text (common in templates)
+      if grep -q "PLACEHOLDER" "$PR_FILE" || grep -q "TODO:" "$PR_FILE" || grep -q "FIXME:" "$PR_FILE"; then
+        PR_WARNINGS+=("Found placeholder text (PLACEHOLDER/TODO/FIXME) - ensure PR is complete")
+      fi
+
+      if [[ ${#PR_WARNINGS[@]} -gt 0 ]]; then
+        echo -e "${RED}❌ PR documentation content issues:${NC}"
+        for warning in "${PR_WARNINGS[@]}"; do
+          echo -e "  ${RED}•${NC} $warning"
+        done
+        echo ""
+        echo -e "${BLUE}   PR file: $PR_FILE${NC}"
+        VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+      else
+        echo -e "${GREEN}✅ PR documentation has required sections${NC}"
+      fi
     fi
   else
     echo -e "${YELLOW}⚠️  Branch doesn't follow epic naming convention - PR check skipped${NC}"
@@ -142,10 +188,10 @@ else
 fi
 
 # ============================================================================
-# CHECK 4: GitHub Actions workflows
+# CHECK 5: GitHub Actions workflows
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[4/6] Checking GitHub Actions workflows...${NC}"
+echo -e "${YELLOW}[5/7] Checking GitHub Actions workflows...${NC}"
 
 WORKFLOW_FILES=(
   ".github/workflows/pr-checks.yml"
@@ -166,10 +212,10 @@ else
 fi
 
 # ============================================================================
-# CHECK 5: Documentation structure
+# CHECK 6: Documentation structure
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[5/6] Checking documentation structure...${NC}"
+echo -e "${YELLOW}[6/7] Checking documentation structure...${NC}"
 
 # Just verify docs directory structure exists
 if [[ -d "docs" ]]; then
@@ -179,10 +225,10 @@ else
 fi
 
 # ============================================================================
-# CHECK 6: Markdown linting configuration
+# CHECK 7: Markdown linting configuration
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[6/6] Checking markdown linting configuration...${NC}"
+echo -e "${YELLOW}[7/7] Checking markdown linting configuration...${NC}"
 
 if [[ ! -f ".markdownlint.json" ]]; then
   echo -e "${YELLOW}⚠️  .markdownlint.json not found (optional)${NC}"
