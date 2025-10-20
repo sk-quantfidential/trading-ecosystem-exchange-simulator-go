@@ -20,7 +20,7 @@ echo ""
 # ============================================================================
 # CHECK 1: Required files exist
 # ============================================================================
-echo -e "${YELLOW}[1/5] Checking required files...${NC}"
+echo -e "${YELLOW}[1/6] Checking required files...${NC}"
 
 REQUIRED_FILES=(
   "README.md"
@@ -45,7 +45,7 @@ fi
 # CHECK 2: Git quality standards plugin
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[2/5] Checking git quality standards plugin...${NC}"
+echo -e "${YELLOW}[2/6] Checking git quality standards plugin...${NC}"
 
 PLUGIN_DIR=".claude/plugins/git_quality_standards"
 REQUIRED_PLUGIN_FILES=(
@@ -66,10 +66,32 @@ if [[ $VALIDATION_ERRORS -eq 0 ]]; then
 fi
 
 # ============================================================================
-# CHECK 3: GitHub Actions workflows
+# CHECK 3: PR documentation exists
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[3/5] Checking GitHub Actions workflows...${NC}"
+echo -e "${YELLOW}[3/6] Checking for PR documentation...${NC}"
+
+if [[ ! -d "docs/prs" ]]; then
+  echo -e "${RED}❌ ERROR: No docs/prs/ directory found${NC}"
+  echo -e "${BLUE}   Create with: mkdir -p docs/prs${NC}"
+  VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+else
+  PR_COUNT=$(find docs/prs -name "*.md" -type f 2>/dev/null | wc -l)
+  if [[ $PR_COUNT -gt 0 ]]; then
+    echo -e "${GREEN}✅ Found $PR_COUNT PR documentation file(s)${NC}"
+  else
+    echo -e "${RED}❌ ERROR: No PR documentation found in docs/prs/${NC}"
+    echo -e "${BLUE}   PR documentation is required before pushing${NC}"
+    echo -e "${BLUE}   See git_workflow_checklist skill for PR documentation requirements${NC}"
+    VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+  fi
+fi
+
+# ============================================================================
+# CHECK 4: GitHub Actions workflows
+# ============================================================================
+echo ""
+echo -e "${YELLOW}[4/6] Checking GitHub Actions workflows...${NC}"
 
 WORKFLOW_FILES=(
   ".github/workflows/pr-checks.yml"
@@ -90,27 +112,23 @@ else
 fi
 
 # ============================================================================
-# CHECK 4: Documentation structure
+# CHECK 5: Documentation structure
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[4/5] Checking documentation structure...${NC}"
+echo -e "${YELLOW}[5/6] Checking documentation structure...${NC}"
 
-if [[ ! -d "docs/prs" ]]; then
-  echo -e "${YELLOW}⚠️  docs/prs/ directory not found${NC}"
+# Just verify docs directory structure exists
+if [[ -d "docs" ]]; then
+  echo -e "${GREEN}✅ Documentation directory structure present${NC}"
 else
-  PR_COUNT=$(find docs/prs -name "*.md" -type f 2>/dev/null | wc -l)
-  if [[ $PR_COUNT -gt 0 ]]; then
-    echo -e "${GREEN}✅ Found $PR_COUNT PR documentation file(s)${NC}"
-  else
-    echo -e "${YELLOW}⚠️  No PR documentation files found${NC}"
-  fi
+  echo -e "${YELLOW}⚠️  No docs/ directory (will be created when needed)${NC}"
 fi
 
 # ============================================================================
-# CHECK 5: Markdown linting configuration
+# CHECK 6: Markdown linting configuration
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[5/5] Checking markdown linting configuration...${NC}"
+echo -e "${YELLOW}[6/6] Checking markdown linting configuration...${NC}"
 
 if [[ ! -f ".markdownlint.json" ]]; then
   echo -e "${YELLOW}⚠️  .markdownlint.json not found (optional)${NC}"
