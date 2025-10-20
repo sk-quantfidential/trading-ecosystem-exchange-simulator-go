@@ -1,0 +1,362 @@
+# GitHub Actions: Repository Validation
+# Runs validation checks on pushes and pull requests
+#
+# Template Version: 1.0.0
+# Skill: git_quality_standards
+# Last Updated: 2025-01-20
+#
+# CUSTOMIZATION INSTRUCTIONS:
+# 1. Copy to: .github/workflows/validation.yml
+# 2. Update branch patterns (lines 11-14) for your workflow
+# 3. Customize validation checks (comment out sections you don't need)
+# 4. Update file requirements (lines 96-99) for your project
+# 5. Commit and push to enable
+
+name: 'Repository Validation'
+
+on:
+  push:
+    # CUSTOMIZE: Add your branch patterns
+    branches: [ main, 'feature/**', 'fix/**', 'docs/**' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # CUSTOMIZE: Set Node.js version for markdownlint
+  NODE_VERSION: '18'
+
+jobs:
+  validate-markdown:
+    name: 'Validate Markdown Files'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install markdownlint
+      run: npm install -g markdownlint-cli
+
+    - name: Validate markdown syntax
+      run: |
+        echo "📋 Validating Markdown files..."
+
+        # Build ignore patterns from .validation_exceptions
+        MARKDOWNLINT_CMD="markdownlint . --ignore node_modules"
+
+        if [ -f ".validation_exceptions" ]; then
+          echo "Loading validation exceptions..."
+
+          while IFS= read -r line; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ ]] || [ -z "$line" ] && continue
+
+            # Handle glob patterns
+            if [[ "$line" == *"*"* ]]; then
+              # Find files matching glob pattern
+              while IFS= read -r -d '' file; do
+                if [ -f "$file" ]; then
+                  MARKDOWNLINT_CMD="$MARKDOWNLINT_CMD --ignore \"$file\""
+                fi
+              done < <(find . -path "./$line" -type f -print0 2>/dev/null || true)
+            else
+              # Handle exact paths
+              if [ -f "$line" ]; then
+                MARKDOWNLINT_CMD="$MARKDOWNLINT_CMD --ignore \"$line\""
+              fi
+            fi
+          done < .validation_exceptions
+        fi
+
+        # Run markdownlint
+        if eval $MARKDOWNLINT_CMD > /tmp/markdownlint.log 2>&1; then
+          echo "✅ Markdown validation passed"
+        else
+          echo "❌ Markdown validation failed"
+          echo ""
+          echo "Issues found:"
+          cat /tmp/markdownlint.log
+          exit 1
+        fi
+
+  validate-structure:
+    name: 'Validate Repository Structure'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Validate required files exist
+      run: |
+        echo "🔍 Validating required files..."
+
+        # CUSTOMIZE: Add your required files
+        required_files=(
+          "README.md"
+          ".gitignore"
+        )
+
+        # CUSTOMIZE: Add optional files (warnings only)
+        optional_files=(
+          "TODO.md"
+          "CLAUDE.md"
+          "CONTRIBUTING.md"
+        )
+
+        ERRORS=0
+
+        for file in "${required_files[@]}"; do
+          if [[ ! -f "$file" ]]; then
+            echo "❌ Required file missing: $file"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ Found: $file"
+          fi
+        done
+
+        for file in "${optional_files[@]}"; do
+          if [[ ! -f "$file" ]]; then
+            echo "⚠️  Optional file missing: $file"
+          else
+            echo "✅ Found: $file"
+          fi
+        done
+
+        if [ $ERRORS -gt 0 ]; then
+          echo ""
+          echo "❌ Validation failed: $ERRORS required file(s) missing"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ All required files exist"
+
+    - name: Validate directory structure
+      run: |
+        echo "🔍 Validating directory structure..."
+
+        # CUSTOMIZE: Add your required directories
+        required_dirs=(
+          ".github"
+        )
+
+        # CUSTOMIZE: Add optional directories (warnings only)
+        optional_dirs=(
+          "docs"
+          "scripts"
+          "tests"
+        )
+
+        ERRORS=0
+
+        for dir in "${required_dirs[@]}"; do
+          if [[ ! -d "$dir" ]]; then
+            echo "❌ Required directory missing: $dir"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ Found: $dir"
+          fi
+        done
+
+        for dir in "${optional_dirs[@]}"; do
+          if [[ ! -d "$dir" ]]; then
+            echo "⚠️  Optional directory missing: $dir"
+          else
+            echo "✅ Found: $dir"
+          fi
+        done
+
+        if [ $ERRORS -gt 0 ]; then
+          echo ""
+          echo "❌ Validation failed: $ERRORS required directory(ies) missing"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ All required directories exist"
+
+  validate-git-setup:
+    name: 'Validate Git Configuration'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check git hooks setup
+      run: |
+        echo "🔍 Checking git hooks configuration..."
+
+        # Check if hook scripts exist
+        if [ -d "scripts" ]; then
+          if [ -f "scripts/pre-push-hook.sh" ]; then
+            echo "✅ Found pre-push-hook.sh"
+
+            # Check if executable
+            if [ -x "scripts/pre-push-hook.sh" ]; then
+              echo "✅ pre-push-hook.sh is executable"
+            else
+              echo "⚠️  pre-push-hook.sh is not executable"
+              echo "   Run: chmod +x scripts/pre-push-hook.sh"
+            fi
+          else
+            echo "⚠️  pre-push-hook.sh not found in scripts/"
+          fi
+
+          if [ -f "scripts/install-git-hooks.sh" ]; then
+            echo "✅ Found install-git-hooks.sh"
+          else
+            echo "⚠️  install-git-hooks.sh not found in scripts/"
+          fi
+        else
+          echo "⚠️  scripts/ directory not found"
+        fi
+
+        echo ""
+        echo "✅ Git hooks check complete"
+
+    - name: Check validation exceptions
+      run: |
+        echo "🔍 Checking validation exceptions..."
+
+        if [ -f ".validation_exceptions" ]; then
+          echo "✅ Found .validation_exceptions"
+
+          # Count non-comment, non-empty lines
+          EXCEPTION_COUNT=$(grep -v '^#' .validation_exceptions | grep -v '^$' | wc -l)
+
+          echo "   Exceptions defined: $EXCEPTION_COUNT"
+
+          if [ $EXCEPTION_COUNT -gt 20 ]; then
+            echo "⚠️  High number of exceptions ($EXCEPTION_COUNT)"
+            echo "   Consider reducing exceptions and fixing underlying issues"
+          fi
+        else
+          echo "ℹ️  No .validation_exceptions file (none needed)"
+        fi
+
+        echo ""
+        echo "✅ Validation exceptions check complete"
+
+  # OPTIONAL: Uncomment if you have custom validation scripts
+  # validate-custom:
+  #   name: 'Run Custom Validation'
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #   - name: Checkout repository
+  #     uses: actions/checkout@v4
+  #
+  #   - name: Run validation script
+  #     run: |
+  #       if [ -f "scripts/validate-repository.sh" ]; then
+  #         echo "Running custom validation script..."
+  #         bash scripts/validate-repository.sh
+  #       else
+  #         echo "No custom validation script found, skipping"
+  #       fi
+
+  summary:
+    name: 'Validation Summary'
+    runs-on: ubuntu-latest
+    needs: [validate-markdown, validate-structure, validate-git-setup]
+    if: always()
+
+    steps:
+    - name: Generate summary
+      run: |
+        echo "## 📋 Validation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Check results from each job
+        if [[ "${{ needs.validate-markdown.result }}" == "success" ]]; then
+          echo "✅ **Markdown Validation**: All files pass linting" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Markdown Validation**: Issues found" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [[ "${{ needs.validate-structure.result }}" == "success" ]]; then
+          echo "✅ **Structure Validation**: Repository structure valid" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Structure Validation**: Issues found" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [[ "${{ needs.validate-git-setup.result }}" == "success" ]]; then
+          echo "✅ **Git Setup**: Configuration valid" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Git Setup**: Issues found" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Validated**: $(date)" >> $GITHUB_STEP_SUMMARY
+
+    - name: Check overall status
+      run: |
+        FAILED_JOBS=0
+
+        [[ "${{ needs.validate-markdown.result }}" != "success" ]] && FAILED_JOBS=$((FAILED_JOBS + 1))
+        [[ "${{ needs.validate-structure.result }}" != "success" ]] && FAILED_JOBS=$((FAILED_JOBS + 1))
+        [[ "${{ needs.validate-git-setup.result }}" != "success" ]] && FAILED_JOBS=$((FAILED_JOBS + 1))
+
+        if [ $FAILED_JOBS -gt 0 ]; then
+          echo "❌ Validation failed: $FAILED_JOBS job(s) failed"
+          exit 1
+        else
+          echo "✅ All validation checks passed"
+        fi
+
+# CUSTOMIZATION GUIDE:
+#
+# 1. BRANCH PATTERNS (lines 11-14):
+#    - Add your branch naming patterns
+#    - Examples: 'feature/**', 'fix/**', 'chore/**', 'develop'
+#
+# 2. REQUIRED FILES (lines 96-99):
+#    - Add files your project must have
+#    - Examples: LICENSE, CHANGELOG.md, package.json
+#
+# 3. OPTIONAL FILES (lines 102-106):
+#    - Add files that should exist but aren't required
+#    - Will generate warnings if missing
+#
+# 4. REQUIRED DIRECTORIES (lines 145-148):
+#    - Add directories your project must have
+#    - Examples: src/, tests/, docs/
+#
+# 5. OPTIONAL DIRECTORIES (lines 151-155):
+#    - Add directories that should exist but aren't required
+#    - Will generate warnings if missing
+#
+# 6. CUSTOM VALIDATION (lines 248-262):
+#    - Uncomment to run your custom validation script
+#    - Add script path if different from scripts/validate-repository.sh
+#
+# 7. ADD MORE JOBS:
+#    - Copy existing job structure
+#    - Add to 'needs:' array in summary job (line 265)
+#    - Add result check in summary step (lines 272-288)
+#
+# EXAMPLES OF ADDITIONAL CHECKS:
+#
+# - Code linting (ESLint, Pylint, etc.)
+# - Type checking (TypeScript, mypy, etc.)
+# - Unit tests
+# - Integration tests
+# - Security scanning
+# - Dependency auditing
+# - License compliance
+# - Code coverage thresholds
+#
+# TESTING:
+#
+# 1. Commit this file to .github/workflows/validation.yml
+# 2. Push to trigger workflow
+# 3. Check Actions tab in GitHub for results
+# 4. Fix any failures
+# 5. Test with intentional failures to verify detection

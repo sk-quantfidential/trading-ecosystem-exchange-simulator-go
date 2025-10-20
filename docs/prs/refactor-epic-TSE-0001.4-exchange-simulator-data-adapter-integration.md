@@ -29,8 +29,8 @@ This PR integrates the exchange-data-adapter-go repository into exchange-simulat
 **Added Dependencies:**
 ```go
 require (
-	github.com/joho/godotenv v1.5.1  // .env file loading
-	github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go v0.0.0-00010101000000-000000000000
+ github.com/joho/godotenv v1.5.1  // .env file loading
+ github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go v0.0.0-00010101000000-000000000000
 )
 
 replace github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go => ../exchange-data-adapter-go
@@ -50,83 +50,83 @@ replace github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go => 
 **Before:**
 ```go
 type Config struct {
-	ServiceName    string
-	ServiceVersion string
-	HTTPPort       int
-	GRPCPort       int
-	LogLevel       string
-	RedisURL       string
+ ServiceName    string
+ ServiceVersion string
+ HTTPPort       int
+ GRPCPort       int
+ LogLevel       string
+ RedisURL       string
 }
 ```
 
 **After:**
 ```go
 import (
-	"context"
-	"time"
-	"github.com/joho/godotenv"
-	"github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go/pkg/adapters"
-	"github.com/sirupsen/logrus"
+ "context"
+ "time"
+ "github.com/joho/godotenv"
+ "github.com/quantfidential/trading-ecosystem/exchange-data-adapter-go/pkg/adapters"
+ "github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	ServiceName             string
-	ServiceVersion          string
-	HTTPPort                int           // Changed default: 8081 → 8082
-	GRPCPort                int           // Changed default: 9091 → 9092
-	LogLevel                string
-	PostgresURL             string        // NEW: Database connection
-	RedisURL                string
-	ConfigurationServiceURL string        // NEW: Config service
-	RequestTimeout          time.Duration // NEW: HTTP timeout
-	CacheTTL                time.Duration // NEW: Cache TTL
-	HealthCheckInterval     time.Duration // NEW: Health interval
+ ServiceName             string
+ ServiceVersion          string
+ HTTPPort                int           // Changed default: 8081 → 8082
+ GRPCPort                int           // Changed default: 9091 → 9092
+ LogLevel                string
+ PostgresURL             string        // NEW: Database connection
+ RedisURL                string
+ ConfigurationServiceURL string        // NEW: Config service
+ RequestTimeout          time.Duration // NEW: HTTP timeout
+ CacheTTL                time.Duration // NEW: Cache TTL
+ HealthCheckInterval     time.Duration // NEW: Health interval
 
-	// Data Adapter
-	dataAdapter adapters.DataAdapter // NEW: Repository access
+ // Data Adapter
+ dataAdapter adapters.DataAdapter // NEW: Repository access
 }
 ```
 
 **New Methods:**
 ```go
 func (c *Config) InitializeDataAdapter(ctx context.Context, logger *logrus.Logger) error {
-	adapter, err := adapters.NewExchangeDataAdapterFromEnv(logger)
-	if err != nil {
-		logger.WithError(err).Warn("Failed to create data adapter, will use stub mode")
-		return err
-	}
+ adapter, err := adapters.NewExchangeDataAdapterFromEnv(logger)
+ if err != nil {
+  logger.WithError(err).Warn("Failed to create data adapter, will use stub mode")
+  return err
+ }
 
-	if err := adapter.Connect(ctx); err != nil {
-		logger.WithError(err).Warn("Failed to connect data adapter, will use stub mode")
-		return err
-	}
+ if err := adapter.Connect(ctx); err != nil {
+  logger.WithError(err).Warn("Failed to connect data adapter, will use stub mode")
+  return err
+ }
 
-	c.dataAdapter = adapter
-	logger.Info("Data adapter initialized successfully")
-	return nil
+ c.dataAdapter = adapter
+ logger.Info("Data adapter initialized successfully")
+ return nil
 }
 
 func (c *Config) GetDataAdapter() adapters.DataAdapter {
-	return c.dataAdapter
+ return c.dataAdapter
 }
 
 func (c *Config) DisconnectDataAdapter(ctx context.Context) error {
-	if c.dataAdapter != nil {
-		return c.dataAdapter.Disconnect(ctx)
-	}
-	return nil
+ if c.dataAdapter != nil {
+  return c.dataAdapter.Disconnect(ctx)
+ }
+ return nil
 }
 ```
 
 **New Helper:**
 ```go
 func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
-		}
-	}
-	return defaultValue
+ if value := os.Getenv(key); value != "" {
+  if duration, err := time.ParseDuration(value); err == nil {
+   return duration
+  }
+ }
+ return defaultValue
 }
 ```
 
