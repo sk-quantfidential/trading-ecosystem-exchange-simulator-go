@@ -1,0 +1,164 @@
+# Validation Exceptions Configuration
+# Files and patterns listed here are excluded from various validation checks
+# to prevent test cases and error documentation from causing validation failures
+#
+# Template Version: 1.0.0
+# Skill: git_quality_standards
+# Last Updated: 2025-01-20
+#
+# CUSTOMIZATION INSTRUCTIONS:
+# 1. Copy this file to your project root: cp .validation_exceptions.template .validation_exceptions
+# 2. Uncomment and customize sections below for your project
+# 3. Keep this file minimal - prefer fixing issues over adding exceptions
+# 4. Regularly review exceptions to ensure they're still needed
+
+# Format:
+# - Lines starting with # are comments
+# - Empty lines are ignored
+# - Glob patterns are supported (e.g., test-validation/*.md)
+# - Paths are relative to repository root
+
+## Test Files with Intentional Failures
+# These files contain intentional errors for testing validation systems
+
+# Example: Test files with intentional markdown formatting issues
+# test-validation/.claude_test_markdown_failures.md
+
+# Example: Test files with intentional code syntax errors
+# test-validation/.claude_test_code_failures.md
+
+# Example: Files with intentional naming convention violations
+# test-validation/invalid_claude_naming.md
+
+# Example: All files in test-validation directory (catch-all for future test files)
+# test-validation/*
+
+## Documentation Examples with Intentional Errors
+# Add paths to any documentation that shows error examples
+
+# Example: Tutorial files that demonstrate common mistakes
+# docs/examples/common-mistakes/*.md
+
+# Example: Anti-pattern documentation
+# docs/anti-patterns/*.md
+
+## Temporary Development Files
+# Add temporary files that shouldn't be validated during development
+
+# Example: Work-in-progress files
+# drafts/*.md
+# .wip/*.md
+
+# Example: Personal notes (if committed)
+# notes/*.md
+
+## Legacy Files
+# Add legacy files that don't conform to current standards but can't be updated yet
+
+# Example: Deprecated directory - archived old configs
+# deprecated/*
+# archived/**/*.md
+
+# Example: Version 1.0 documentation (archived)
+# docs/v1/**
+
+## Third-Party or Generated Files
+# Add files that are auto-generated or from third parties
+
+# Example: Auto-generated documentation
+# api-docs/generated/*.md
+
+# Example: Vendor documentation
+# vendor/**/*.md
+
+# Example: Node modules (should be in .gitignore but just in case)
+# node_modules/**
+
+## Template Files
+# Template files often contain placeholder text or examples that fail validation
+
+# Example: Repository templates
+# templates/**/*.md
+
+# Example: Project scaffolding templates
+# .templates/**
+
+# Example: Cookiecutter or similar templates
+# {{cookiecutter.project_name}}/**
+
+## Self-Reference Exceptions
+# Files that reference themselves or contain circular references
+
+# Example: Repository structure documentation
+# REPOSITORY.md
+
+# Example: Project template files that show directory structures
+# project-templates/*/STRUCTURE.md
+
+## Large External Files
+# Files from external sources that you don't control
+
+# Example: Third-party changelog
+# CHANGELOG_EXTERNAL.md
+
+# Example: License files with unusual formatting
+# licenses/*.md
+
+## Configuration Examples
+# Example configuration files that may have intentional issues
+
+# Example: Bad configuration examples for documentation
+# docs/config-examples/bad/*.yml
+
+# Example: Before/after examples
+# docs/refactoring/before/*.md
+
+## Notes and Recommendations:
+
+# MINIMAL EXCEPTIONS: Keep this file as small as possible
+# - Each exception reduces the effectiveness of your validation
+# - Consider fixing issues instead of adding exceptions
+
+# SPECIFIC OVER BROAD: Use specific paths rather than broad patterns
+# - Prefer: docs/examples/bad-example.md
+# - Avoid: docs/**/*.md
+
+# REGULAR REVIEW: Set a reminder to review exceptions quarterly
+# - Remove exceptions that are no longer needed
+# - Update exceptions that are too broad
+# - Fix underlying issues when possible
+
+# DOCUMENTATION: Always comment why an exception exists
+# - Future you will thank present you
+# - Team members need to understand the reasoning
+# - Helps identify exceptions that can be removed
+
+# VERSION CONTROL: Commit this file to your repository
+# - Ensures consistent validation across team
+# - Tracks changes to exceptions over time
+# - Makes exceptions visible in code review
+
+## Common Patterns (Uncomment and Customize):
+
+# Ignore all files in archived directories
+# archived/**
+# deprecated/**
+
+# Ignore template files
+# templates/**/*.md
+# .templates/**
+
+# Ignore test fixtures
+# tests/fixtures/**
+# __tests__/fixtures/**
+
+# Ignore build artifacts (should be in .gitignore)
+# dist/**
+# build/**
+# out/**
+
+# Ignore documentation generated from code
+# docs/api/**
+# docs/reference/**
+
+# End of template
