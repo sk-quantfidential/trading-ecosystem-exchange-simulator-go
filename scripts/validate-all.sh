@@ -66,24 +66,78 @@ if [[ $VALIDATION_ERRORS -eq 0 ]]; then
 fi
 
 # ============================================================================
-# CHECK 3: PR documentation exists
+# CHECK 3: PR documentation exists for current branch
 # ============================================================================
 echo ""
 echo -e "${YELLOW}[3/6] Checking for PR documentation...${NC}"
 
-if [[ ! -d "docs/prs" ]]; then
-  echo -e "${RED}❌ ERROR: No docs/prs/ directory found${NC}"
-  echo -e "${BLUE}   Create with: mkdir -p docs/prs${NC}"
-  VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+# Get current branch name
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+if [[ -z "$CURRENT_BRANCH" ]] || [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
+  echo -e "${YELLOW}⚠️  On main/master branch - PR documentation check skipped${NC}"
 else
-  PR_COUNT=$(find docs/prs -name "*.md" -type f 2>/dev/null | wc -l)
-  if [[ $PR_COUNT -gt 0 ]]; then
-    echo -e "${GREEN}✅ Found $PR_COUNT PR documentation file(s)${NC}"
+  # Extract branch components
+  if [[ "$CURRENT_BRANCH" =~ ^([^/]+)/epic-([A-Z]{3})-([0-9]{4})(-(.+))?$ ]]; then
+    BRANCH_TYPE="${BASH_REMATCH[1]}"
+    EPIC_CODE="${BASH_REMATCH[2]}"
+    EPIC_NUM="${BASH_REMATCH[4]}"
+    EPIC_INFO="epic-${EPIC_CODE}-${BASH_REMATCH[3]}"
+
+    # Convert branch type to PR prefix
+    case "$BRANCH_TYPE" in
+      feature) PR_PREFIX="feat" ;;
+      fix) PR_PREFIX="fix" ;;
+      docs) PR_PREFIX="docs" ;;
+      style) PR_PREFIX="style" ;;
+      refactor) PR_PREFIX="refac" ;;
+      test) PR_PREFIX="test" ;;
+      chore) PR_PREFIX="chore" ;;
+      ci) PR_PREFIX="ci" ;;
+      *) PR_PREFIX="$BRANCH_TYPE" ;;
+    esac
+
+    # Look for PR documentation matching current branch
+    PR_FILES_FOUND=()
+    if [[ -d "docs/prs" ]]; then
+      # Pattern 1: {prefix}-epic-XXX-9999-*.md
+      while IFS= read -r -d '' file; do
+        PR_FILES_FOUND+=("$file")
+      done < <(find docs/prs -name "${PR_PREFIX}-${EPIC_INFO}-*.md" -print0 2>/dev/null || true)
+
+      # Pattern 2: Full branch name with slashes replaced
+      BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
+      if [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
+        PR_FILES_FOUND+=("docs/prs/${BRANCH_FILENAME}.md")
+      fi
+    fi
+
+    if [[ ${#PR_FILES_FOUND[@]} -eq 0 ]]; then
+      echo -e "${RED}❌ ERROR: No PR documentation found for current branch${NC}"
+      echo -e "${BLUE}   Branch: $CURRENT_BRANCH${NC}"
+      echo -e "${BLUE}   Expected PR file matching one of:${NC}"
+      echo -e "${BLUE}     docs/prs/${PR_PREFIX}-${EPIC_INFO}-*.md${NC}"
+      echo -e "${BLUE}     docs/prs/${BRANCH_FILENAME}.md${NC}"
+      echo ""
+      echo -e "${BLUE}   Create PR documentation before pushing:${NC}"
+      echo -e "${BLUE}     mkdir -p docs/prs${NC}"
+      echo -e "${BLUE}     # Create and fill in PR documentation${NC}"
+      echo -e "${BLUE}     git add docs/prs/ && git commit -m 'docs: add PR documentation'${NC}"
+      VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+
+      # List existing PR files to help user
+      if [[ -d "docs/prs" ]] && [[ -n "$(ls -A docs/prs/*.md 2>/dev/null)" ]]; then
+        echo ""
+        echo -e "${BLUE}   Existing PR files:${NC}"
+        ls -1 docs/prs/*.md 2>/dev/null | sed 's/^/     /' || true
+      fi
+    else
+      echo -e "${GREEN}✅ Found PR documentation: ${PR_FILES_FOUND[0]}${NC}"
+    fi
   else
-    echo -e "${RED}❌ ERROR: No PR documentation found in docs/prs/${NC}"
-    echo -e "${BLUE}   PR documentation is required before pushing${NC}"
-    echo -e "${BLUE}   See git_workflow_checklist skill for PR documentation requirements${NC}"
-    VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+    echo -e "${YELLOW}⚠️  Branch doesn't follow epic naming convention - PR check skipped${NC}"
+    echo -e "${BLUE}   Expected: type/epic-XXX-9999-description${NC}"
+    echo -e "${BLUE}   Actual: $CURRENT_BRANCH${NC}"
   fi
 fi
 
