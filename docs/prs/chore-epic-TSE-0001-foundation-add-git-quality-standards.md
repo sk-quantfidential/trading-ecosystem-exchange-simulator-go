@@ -20,7 +20,7 @@ Establish consistent git workflow quality standards across all repositories in t
 - Consistent code quality and formatting
 - Automated validation in CI/CD
 
-## Changes
+## What Changed
 
 ### Validation Script CHECK 3 Fix
 **IMPORTANT**: Fixed validate-all.sh CHECK 3 to verify PR documentation exists **for the current branch**, not just any PR doc in docs/prs/.

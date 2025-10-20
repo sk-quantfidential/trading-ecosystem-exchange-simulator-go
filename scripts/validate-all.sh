@@ -143,17 +143,18 @@ else
       PR_FILE="${PR_FILES_FOUND[0]}"
       PR_WARNINGS=()
 
-      # Check for required sections
+      # Check for required sections (standardized across all tools)
+      # Required: ## Summary, ## Testing (or ## Quality Assurance), ## What Changed
       if ! grep -q "## Summary" "$PR_FILE"; then
         PR_WARNINGS+=("Missing '## Summary' section")
       fi
 
-      if ! grep -q "## Quality Assurance" "$PR_FILE" && ! grep -q "## Testing" "$PR_FILE"; then
-        PR_WARNINGS+=("Missing '## Quality Assurance' or '## Testing' section")
+      if ! grep -q "## Testing" "$PR_FILE" && ! grep -q "## Quality Assurance" "$PR_FILE"; then
+        PR_WARNINGS+=("Missing '## Testing' or '## Quality Assurance' section")
       fi
 
-      if ! grep -q "## Files Changed" "$PR_FILE" && ! grep -q "## What Changed" "$PR_FILE" && ! grep -q "## Changes" "$PR_FILE"; then
-        PR_WARNINGS+=("Missing '## Files Changed', '## What Changed', or '## Changes' section")
+      if ! grep -q "## What Changed" "$PR_FILE"; then
+        PR_WARNINGS+=("Missing '## What Changed' section")
       fi
 
       # Check for epic reference in PR file

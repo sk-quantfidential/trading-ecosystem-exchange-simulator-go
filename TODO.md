@@ -668,7 +668,7 @@ See `orchestrator-docker/TODO.md` for:
 - Redis: exchange-adapter user with ACL
 
 **Future Work (Deferred to Next Epic)**:
-- Comprehensive BDD tests (~2000-3000 LOC, 8 test suites, 50+ scenarios)
+- Comprehensive BDD tests (~2500-3000 LOC, 8 test suites, 50+ scenarios)
 - UUID generation enhancement in repository Create methods
 - Redis ACL enhancement (keys, scan, ping commands)
 - Full CRUD cycle tests for all domain repositories
