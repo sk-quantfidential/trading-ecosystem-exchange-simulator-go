@@ -1,6 +1,6 @@
 # Pull Request: TSE-0001.12.0 - Multi-Instance Infrastructure Foundation + Prometheus Metrics + Testing Suite
 
-**Branch:** `feature/TSE-0001.12.0-prometheus-metric-client`
+**Branch:** `feature/epic-TSE-0001-prometheus-metrics-client`
 **Base:** `main`
 **Epic:** TSE-0001 - Trading Ecosystem Foundation
 **Phase:** 0 (Multi-Instance Infrastructure + Observability) + Testing Enhancement
@@ -453,9 +453,9 @@ scrape_configs:
 ## Related PRs
 
 - **exchange-data-adapter-go:** `feature/TSE-0001.12.0-named-components-foundation` (multi-instance foundation)
-- **audit-correlator-go:** `feature/TSE-0001.12.0-prometheus-metric-client` (Prometheus metrics pattern)
-- **custodian-simulator-go:** `feature/TSE-0001.12.0-prometheus-metric-client` (testing infrastructure)
-- **market-data-simulator-go:** `feature/TSE-0001.12.0-prometheus-metric-client` (Makefile pattern)
+- **audit-correlator-go:** `feature/epic-TSE-0001-prometheus-metrics-client` (Prometheus metrics pattern)
+- **custodian-simulator-go:** `feature/epic-TSE-0001-prometheus-metrics-client` (testing infrastructure)
+- **market-data-simulator-go:** `feature/epic-TSE-0001-prometheus-metrics-client` (Makefile pattern)
 
 ---
 
