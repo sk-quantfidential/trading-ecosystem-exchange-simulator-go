@@ -20,7 +20,6 @@ This implementation follows the **singleton pattern** for the exchange-simulator
 
 ## Architecture Pattern
 
-
 ## What Changed
 
 See detailed commit-by-commit changes documented in the sections below.
@@ -31,7 +30,6 @@ All validation checks pass:
 - `scripts/validate-all.sh` - All checks passing
 - Unit tests passing
 - Integration tests passing
-
 
 ### Singleton Service (Current)
 ```
