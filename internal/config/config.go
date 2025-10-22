@@ -12,10 +12,17 @@ import (
 )
 
 type Config struct {
+	// Service Identity
 	ServiceName             string
+	ServiceInstanceName     string // Instance identifier (e.g., "exchange-OKX")
 	ServiceVersion          string
+	Environment             string // Deployment environment (development, staging, production)
+
+	// Network
 	HTTPPort                int
 	GRPCPort                int
+
+	// Configuration
 	LogLevel                string
 	PostgresURL             string
 	RedisURL                string
@@ -32,9 +39,11 @@ func Load() *Config {
 	// Try to load .env file (ignore errors if not found)
 	_ = godotenv.Load()
 
-	return &Config{
+	cfg := &Config{
 		ServiceName:             getEnv("SERVICE_NAME", "exchange-simulator"),
+		ServiceInstanceName:     getEnv("SERVICE_INSTANCE_NAME", ""),
 		ServiceVersion:          getEnv("SERVICE_VERSION", "1.0.0"),
+		Environment:             getEnv("ENVIRONMENT", "development"),
 		HTTPPort:                getEnvAsInt("HTTP_PORT", 8082),
 		GRPCPort:                getEnvAsInt("GRPC_PORT", 9092),
 		LogLevel:                getEnv("LOG_LEVEL", "info"),
@@ -45,6 +54,13 @@ func Load() *Config {
 		CacheTTL:                getEnvAsDuration("CACHE_TTL", 5*time.Minute),
 		HealthCheckInterval:     getEnvAsDuration("HEALTH_CHECK_INTERVAL", 30*time.Second),
 	}
+
+	// Backward compatibility: Default ServiceInstanceName to ServiceName
+	if cfg.ServiceInstanceName == "" {
+		cfg.ServiceInstanceName = cfg.ServiceName
+	}
+
+	return cfg
 }
 
 func (c *Config) InitializeDataAdapter(ctx context.Context, logger *logrus.Logger) error {

@@ -28,6 +28,23 @@ func main() {
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
+	// Add instance context to all logs
+	logger = logger.WithFields(logrus.Fields{
+		"service_name":  cfg.ServiceName,
+		"instance_name": cfg.ServiceInstanceName,
+		"environment":   cfg.Environment,
+	}).Logger
+
+	logger.Info("Starting exchange-simulator service")
+
+	// Initialize DataAdapter
+	ctx := context.Background()
+	if err := cfg.InitializeDataAdapter(ctx, logger); err != nil {
+		logger.WithError(err).Warn("Failed to initialize data adapter, continuing in stub mode")
+	} else {
+		logger.Info("Data adapter initialized successfully")
+	}
+
 	exchangeService := services.NewExchangeService(cfg, logger)
 
 	grpcServer := setupGRPCServer(cfg, exchangeService, logger)
@@ -56,6 +73,11 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
+	// Disconnect DataAdapter
+	if err := cfg.DisconnectDataAdapter(shutdownCtx); err != nil {
+		logger.WithError(err).Error("Failed to disconnect data adapter")
+	}
+
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.WithError(err).Error("HTTP server forced to shutdown")
 	}
@@ -78,7 +100,7 @@ func setupHTTPServer(cfg *config.Config, exchangeService *services.ExchangeServi
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	healthHandler := handlers.NewHealthHandler(logger)
+	healthHandler := handlers.NewHealthHandlerWithConfig(cfg, logger)
 
 	v1 := router.Group("/api/v1")
 	{
