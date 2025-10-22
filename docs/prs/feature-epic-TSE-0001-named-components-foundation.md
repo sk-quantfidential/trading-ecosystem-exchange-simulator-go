@@ -2,7 +2,7 @@
 
 **Epic:** TSE-0001 - Foundation Services & Infrastructure
 **Milestone:** TSE-0001.12.0 - Multi-Instance Infrastructure Foundation
-**Branch:** `feature/TSE-0001.12.0-named-components-foundation`
+**Branch:** `feature/epic-TSE-0001-named-components-foundation`
 **Repository:** exchange-simulator-go
 **Status:** ✅ Ready for Merge
 
