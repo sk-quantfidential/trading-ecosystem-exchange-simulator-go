@@ -152,7 +152,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/main /app/main
-EXPOSE 8081 9091
+EXPOSE 8080 50051
 CMD ["/app/main"]
 ```
 
@@ -186,7 +186,7 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8082 9092
+EXPOSE 8080 50051
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:8082/api/v1/health || exit 1

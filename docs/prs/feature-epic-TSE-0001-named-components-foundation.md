@@ -47,7 +47,7 @@ ServiceInstanceName: exchange-OKX
 → Redis Namespace: "exchange:OKX" (via data adapter)
 ```
 
-## Changes
+## What Changed
 
 ### 1. Enhanced Configuration (`internal/config/config.go`)
 

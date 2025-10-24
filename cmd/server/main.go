@@ -17,7 +17,9 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/config"
+	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/domain/ports"
 	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/handlers"
+	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/infrastructure/observability"
 	"github.com/quantfidential/trading-ecosystem/exchange-simulator-go/internal/services"
 )
 
@@ -36,6 +38,16 @@ func main() {
 	}).Logger
 
 	logger.Info("Starting exchange-simulator service")
+
+	// Initialize Prometheus Metrics Adapter
+	constantLabels := (&ports.MetricsLabels{
+		Service:  cfg.ServiceName,
+		Instance: cfg.ServiceInstanceName,
+		Version:  cfg.ServiceVersion,
+	}).ConstantLabels()
+	metricsPort := observability.NewPrometheusMetricsAdapter(constantLabels)
+	cfg.SetMetricsPort(metricsPort)
+	logger.Info("Prometheus metrics adapter initialized")
 
 	// Initialize DataAdapter
 	ctx := context.Background()
@@ -100,13 +112,24 @@ func setupHTTPServer(cfg *config.Config, exchangeService *services.ExchangeServi
 	router := gin.New()
 	router.Use(gin.Recovery())
 
+	// Add RED metrics middleware for all routes
+	metricsPort := cfg.GetMetricsPort()
+	if metricsPort != nil {
+		router.Use(observability.REDMetricsMiddleware(metricsPort))
+		router.Use(observability.HealthMetricsMiddleware(metricsPort, "exchange-simulator"))
+	}
+
 	healthHandler := handlers.NewHealthHandlerWithConfig(cfg, logger)
+	metricsHandler := handlers.NewMetricsHandler(metricsPort)
 
 	v1 := router.Group("/api/v1")
 	{
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ready", healthHandler.Ready)
 	}
+
+	// Metrics endpoint (outside v1 group, at root level)
+	router.GET("/metrics", metricsHandler.Metrics)
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),

@@ -17,12 +17,12 @@ import (
 
 // Mock Redis client for testing
 type mockRedisClient struct {
-	data       map[string]string
-	pingError  error
-	setError   error
-	getError   error
-	delError   error
-	keysError  error
+	data      map[string]string
+	pingError error
+	setError  error
+	getError  error
+	delError  error
+	keysError error
 }
 
 func newMockRedisClient() *mockRedisClient {
@@ -123,7 +123,7 @@ func TestServiceDiscoveryClient_Start(t *testing.T) {
 		cfg := &config.Config{
 			ServiceName:    "test-service",
 			ServiceVersion: "1.0.0",
-			GRPCPort:       9090,
+			GRPCPort:       50051,
 			HTTPPort:       8080,
 			RedisURL:       "redis://localhost:6379",
 		}
@@ -176,8 +176,8 @@ func TestServiceDiscoveryClient_Start(t *testing.T) {
 			t.Errorf("Expected service name 'test-service', got %s", serviceInfo.ServiceName)
 		}
 
-		if serviceInfo.GRPCPort != 9090 {
-			t.Errorf("Expected gRPC port 9090, got %d", serviceInfo.GRPCPort)
+		if serviceInfo.GRPCPort != 50051 {
+			t.Errorf("Expected gRPC port 50051, got %d", serviceInfo.GRPCPort)
 		}
 
 		metrics := client.GetMetrics()
@@ -219,7 +219,7 @@ func TestServiceDiscoveryClient_Stop(t *testing.T) {
 		cfg := &config.Config{
 			ServiceName:    "test-service",
 			ServiceVersion: "1.0.0",
-			GRPCPort:       9090,
+			GRPCPort:       50051,
 			HTTPPort:       8080,
 			RedisURL:       "redis://localhost:6379",
 		}
@@ -444,13 +444,13 @@ func TestServiceDiscoveryClient_GetServiceEndpoint(t *testing.T) {
 		service := ServiceInfo{
 			ServiceName: "target-service",
 			Host:        "service-host",
-			GRPCPort:    9090,
+			GRPCPort:    50051,
 			Status:      "healthy",
 			LastSeen:    time.Now(),
 		}
 
 		serviceData, _ := json.Marshal(service)
-		serviceKey := "services:target-service:service-host:9090"
+		serviceKey := "services:target-service:service-host:50051"
 		mockRedis.data[serviceKey] = string(serviceData)
 
 		endpoint, err := client.GetServiceEndpoint("target-service")
@@ -458,7 +458,7 @@ func TestServiceDiscoveryClient_GetServiceEndpoint(t *testing.T) {
 			t.Fatalf("Expected no error, got %v", err)
 		}
 
-		expectedEndpoint := "service-host:9090"
+		expectedEndpoint := "service-host:50051"
 		if endpoint != expectedEndpoint {
 			t.Errorf("Expected endpoint '%s', got '%s'", expectedEndpoint, endpoint)
 		}
