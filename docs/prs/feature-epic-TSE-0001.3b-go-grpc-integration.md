@@ -4,6 +4,25 @@
 
 Successfully completed **TSE-0001.3b: Go Services gRPC Integration** milestone for `exchange-simulator-go` following the proven TDD Red-Green-Refactor pattern established in `audit-correlator-go` and `custodian-simulator-go`. This implementation provides complete inter-service communication infrastructure with service discovery, configuration management, and robust error handling.
 
+## What Changed
+
+### exchange-simulator-go
+
+**Infrastructure Layer**:
+- Configuration client with HTTP-based caching (5-min TTL)
+- Redis-based service discovery (30s heartbeat, 90s stale cleanup)
+- Inter-service client manager with connection pooling and circuit breaker
+
+**Presentation Layer**:
+- Enhanced gRPC server with health service integration
+- Request metrics and unary interceptors
+- Graceful startup/shutdown with context cancellation
+
+**Testing**:
+- 42+ test cases with 100% unit test coverage
+- Smart infrastructure detection (graceful skip when Redis unavailable)
+- Complete TDD Red-Green-Refactor cycle
+
 ## Architecture Implementation
 
 ### 🏗️ Infrastructure Layer

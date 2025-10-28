@@ -11,6 +11,24 @@
 
 This PR integrates the exchange-data-adapter-go repository into exchange-simulator-go service layer, following the proven custodian-simulator-go integration pattern. The integration provides clean access to Account, Order, Trade, and Balance repository operations through a centralized DataAdapter with graceful degradation, environment-based configuration, and multi-context Docker build support.
 
+## What Changed
+
+### exchange-simulator-go
+
+**Data Layer Integration**:
+- Integrated exchange-data-adapter-go for Account, Order, Trade, Balance repositories
+- Added DataAdapter initialization and lifecycle management in config layer
+- Implemented environment configuration with godotenv support
+
+**Docker Build**:
+- Multi-context Docker build for sibling dependencies
+- Updated Dockerfile for parent directory build context
+- Validated build with go build ./...
+
+**Graceful Degradation**:
+- Stub mode fallback when PostgreSQL/Redis unavailable
+- Clean error handling and logging
+
 ### Key Achievements
 
 - ✅ **Dependency Integration**: exchange-data-adapter-go dependency with replace directive for local development
