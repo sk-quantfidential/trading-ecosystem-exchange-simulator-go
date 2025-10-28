@@ -188,55 +188,74 @@ else
 fi
 
 # ============================================================================
-# CHECK 5: Verify TODO.md was updated
+# CHECK 5: Verify TODO.md or TODO-MASTER.md was updated
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[5/6] Checking TODO.md updates...${NC}"
+echo -e "${YELLOW}[5/6] Checking TODO documentation updates...${NC}"
 
-# Get commits that will be pushed
-REMOTE_BRANCH="origin/$CURRENT_BRANCH"
-if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
-  # Branch exists on remote, check new commits
-  NEW_COMMITS=$(git log "$REMOTE_BRANCH..HEAD" --oneline)
+# Determine which TODO file to check for
+TODO_FILE=""
+if [[ -f "TODO-MASTER.md" ]]; then
+  TODO_FILE="TODO-MASTER.md"
+elif [[ -f "TODO.md" ]]; then
+  TODO_FILE="TODO.md"
+fi
 
-  if [[ -n "$NEW_COMMITS" ]]; then
-    # Check if TODO.md was modified in any of the new commits
-    TODO_MODIFIED=$(git log "$REMOTE_BRANCH..HEAD" --name-only --oneline | grep -c "TODO.md" || true)
+if [[ -z "$TODO_FILE" ]]; then
+  echo -e "${YELLOW}⚠️  No TODO.md or TODO-MASTER.md found${NC}"
+  echo ""
+  read -p "Continue with push anyway? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${RED}Push cancelled.${NC}"
+    exit 1
+  fi
+else
+  # Get commits that will be pushed
+  REMOTE_BRANCH="origin/$CURRENT_BRANCH"
+  if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
+    # Branch exists on remote, check new commits
+    NEW_COMMITS=$(git log "$REMOTE_BRANCH..HEAD" --oneline)
 
-    if [[ $TODO_MODIFIED -eq 0 ]]; then
-      echo -e "${YELLOW}⚠️  TODO.md not modified in new commits${NC}"
-      echo ""
-      echo "New commits to push:"
-      echo "$NEW_COMMITS" | sed 's/^/  /'
-      echo ""
-      echo "Consider updating TODO.md if this work completes tasks or milestones."
+    if [[ -n "$NEW_COMMITS" ]]; then
+      # Check if TODO file was modified in any of the new commits
+      TODO_MODIFIED=$(git log "$REMOTE_BRANCH..HEAD" --name-only --oneline | grep -E "(TODO\.md|TODO-MASTER\.md)" | wc -l || true)
+
+      if [[ $TODO_MODIFIED -eq 0 ]]; then
+        echo -e "${YELLOW}⚠️  $TODO_FILE not modified in new commits${NC}"
+        echo ""
+        echo "New commits to push:"
+        echo "$NEW_COMMITS" | sed 's/^/  /'
+        echo ""
+        echo "Consider updating $TODO_FILE if this work completes tasks or milestones."
+        echo ""
+        read -p "Continue with push anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+          echo -e "${RED}Push cancelled. Update $TODO_FILE and try again.${NC}"
+          exit 1
+        fi
+      else
+        echo -e "${GREEN}✅ TODO documentation was updated ($TODO_MODIFIED commit(s))${NC}"
+      fi
+    fi
+  else
+    # First push of this branch
+    echo -e "${BLUE}ℹ️  First push of branch (no remote tracking yet)${NC}"
+
+    # Check if TODO file exists in commits
+    TODO_IN_BRANCH=$(git log --name-only --oneline | grep -E "(TODO\.md|TODO-MASTER\.md)" | wc -l || true)
+    if [[ $TODO_IN_BRANCH -gt 0 ]]; then
+      echo -e "${GREEN}✅ TODO documentation included in branch commits${NC}"
+    else
+      echo -e "${YELLOW}⚠️  $TODO_FILE not found in branch commits${NC}"
       echo ""
       read -p "Continue with push anyway? (y/N) " -n 1 -r
       echo
       if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${RED}Push cancelled. Update TODO.md and try again.${NC}"
+        echo -e "${RED}Push cancelled.${NC}"
         exit 1
       fi
-    else
-      echo -e "${GREEN}✅ TODO.md was updated ($TODO_MODIFIED commit(s))${NC}"
-    fi
-  fi
-else
-  # First push of this branch
-  echo -e "${BLUE}ℹ️  First push of branch (no remote tracking yet)${NC}"
-
-  # Check if TODO.md exists in commits
-  TODO_IN_BRANCH=$(git log --name-only --oneline | grep -c "TODO.md" || true)
-  if [[ $TODO_IN_BRANCH -gt 0 ]]; then
-    echo -e "${GREEN}✅ TODO.md included in branch commits${NC}"
-  else
-    echo -e "${YELLOW}⚠️  TODO.md not found in branch commits${NC}"
-    echo ""
-    read -p "Continue with push anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo -e "${RED}Push cancelled.${NC}"
-      exit 1
     fi
   fi
 fi

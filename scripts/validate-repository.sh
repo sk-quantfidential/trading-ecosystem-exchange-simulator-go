@@ -63,7 +63,7 @@ echo -e "\n${BLUE}Checking required documentation...${NC}"
 
 # Customize this list for your project
 required_docs=("README.md")
-optional_docs=("TODO.md" "CLAUDE.md" "CONTRIBUTING.md")
+optional_docs=("CLAUDE.md" "CONTRIBUTING.md")
 
 for doc in "${required_docs[@]}"; do
     if [ ! -f "$doc" ]; then
@@ -72,6 +72,18 @@ for doc in "${required_docs[@]}"; do
         report_success "Required documentation exists: $doc"
     fi
 done
+
+# Check for TODO.md OR TODO-MASTER.md (either is acceptable)
+if [ -f "TODO.md" ] || [ -f "TODO-MASTER.md" ]; then
+    if [ -f "TODO.md" ]; then
+        report_success "TODO documentation exists: TODO.md"
+    fi
+    if [ -f "TODO-MASTER.md" ]; then
+        report_success "TODO documentation exists: TODO-MASTER.md"
+    fi
+else
+    report_warning "Optional documentation missing: TODO.md or TODO-MASTER.md"
+fi
 
 for doc in "${optional_docs[@]}"; do
     if [ ! -f "$doc" ]; then

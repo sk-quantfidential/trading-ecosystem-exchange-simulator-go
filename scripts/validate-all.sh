@@ -24,7 +24,6 @@ echo -e "${YELLOW}[1/6] Checking required files...${NC}"
 
 REQUIRED_FILES=(
   "README.md"
-  "TODO.md"
   "CONTRIBUTING.md"
   ".gitignore"
   ".validation_exceptions"
@@ -36,6 +35,12 @@ for file in "${REQUIRED_FILES[@]}"; do
     VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
   fi
 done
+
+# Check for TODO.md OR TODO-MASTER.md (either is acceptable)
+if [[ ! -f "TODO.md" ]] && [[ ! -f "TODO-MASTER.md" ]]; then
+  echo -e "${RED}❌ Missing required file: TODO.md or TODO-MASTER.md${NC}"
+  VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+fi
 
 if [[ $VALIDATION_ERRORS -eq 0 ]]; then
   echo -e "${GREEN}✅ All required files present${NC}"
