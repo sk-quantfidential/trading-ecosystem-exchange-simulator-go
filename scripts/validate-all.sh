@@ -112,10 +112,43 @@ else
 fi
 
 # ============================================================================
+# ============================================================================
+# CHECK 4: Checking PR documentation structure...
+# ============================================================================
+echo ""
+echo -e "${YELLOW}[4/5] Checking PR documentation structure...${NC}"
+
+if [[ -d "docs/prs" ]]; then
+  PR_COUNT=$(find docs/prs -name "*.md" -type f 2>/dev/null | wc -l)
+
+  if [[ $PR_COUNT -gt 0 ]]; then
+    echo -e "${GREEN}✅ Found $PR_COUNT PR documentation file(s)${NC}"
+
+    # Check if current branch has PR docs
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+    if [[ "$CURRENT_BRANCH" != "main" ]] && [[ "$CURRENT_BRANCH" != "master" ]] && [[ -n "$CURRENT_BRANCH" ]]; then
+      BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
+      if [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
+        echo -e "${GREEN}✅ PR documentation exists for current branch${NC}"
+      else
+        echo -e "${YELLOW}⚠️  No PR documentation for current branch${NC}"
+        echo -e "${YELLOW}   Expected: docs/prs/${BRANCH_FILENAME}.md${NC}"
+      fi
+    else
+      echo -e "${BLUE}ℹ️  On main/master branch - PR documentation check skipped${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  docs/prs/ directory exists but is empty${NC}"
+  fi
+else
+  echo -e "${YELLOW}ℹ️  docs/prs/ directory not found (PR documentation optional)${NC}"
+fi
+
+
 # CHECK 5: Markdown linting configuration
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[5/5] Checking markdown linting configuration...${NC}"
+echo -e "${YELLOW}[5/6] Checking markdown linting configuration...${NC}"
 
 if [[ ! -f ".markdownlint.json" ]]; then
   echo -e "${YELLOW}⚠️  .markdownlint.json not found (optional)${NC}"
