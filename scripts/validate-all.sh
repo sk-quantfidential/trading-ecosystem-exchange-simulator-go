@@ -37,7 +37,7 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 # Check for TODO.md OR TODO-MASTER.md (either is acceptable)
-if [[ ! -f  ]] && [[ ! -f "TODO-MASTER.md" ]]; then
+if [[ ! -f "TODO.md" ]] && [[ ! -f "TODO-MASTER.md" ]]; then
   echo -e "${RED}❌ Missing required file: TODO.md or TODO-MASTER.md${NC}"
   VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
 fi
