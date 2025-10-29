@@ -129,8 +129,8 @@ if ! grep -q "## Testing" "$PR_FILE" && ! grep -q "## Quality Assurance" "$PR_FI
   PR_WARNINGS+=("Missing '## Testing' or '## Quality Assurance' section")
 fi
 
-if ! grep -q "## What Changed" "$PR_FILE"; then
-  PR_WARNINGS+=("Missing '## What Changed' section")
+if ! grep -q "## Files Changed" "$PR_FILE" && ! grep -q "## What Changed" "$PR_FILE"; then
+  PR_WARNINGS+=("Missing '## Files Changed' or '## What Changed' section")
 fi
 
 # Check for epic reference in PR file
