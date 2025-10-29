@@ -78,42 +78,18 @@ EPIC_INFO=$(echo "$CURRENT_BRANCH" | grep -oE "epic-[A-Z]{3}-[0-9]{4}" || echo "
 echo ""
 echo -e "${YELLOW}[3/6] Checking for PR documentation...${NC}"
 
-# Convert branch type to PR prefix
-case "$BRANCH_TYPE" in
-  feature) PR_PREFIX="feat" ;;
-  fix) PR_PREFIX="fix" ;;
-  docs) PR_PREFIX="docs" ;;
-  style) PR_PREFIX="style" ;;
-  refactor) PR_PREFIX="refac" ;;
-  test) PR_PREFIX="test" ;;
-  chore) PR_PREFIX="chore" ;;
-  ci) PR_PREFIX="ci" ;;
-  *) PR_PREFIX="feat" ;;
-esac
+# Look for PR file matching branch name (with slashes converted to dashes)
+BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
+PR_FILE=""
 
-# Look for PR file in docs/prs/
-PR_FILES_FOUND=()
-if [[ -d "docs/prs" ]]; then
-  # Look for files that match the branch pattern
-  # Pattern: {prefix}-epic-XXX-9999-*.md
-  if [[ -n "$EPIC_INFO" ]]; then
-    while IFS= read -r -d '' file; do
-      PR_FILES_FOUND+=("$file")
-    done < <(find docs/prs -name "${PR_PREFIX}-${EPIC_INFO}-*.md" -print0 2>/dev/null || true)
-  fi
-
-  # Also check for files matching the full branch name (with slashes replaced)
-  BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
-  if [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
-    PR_FILES_FOUND+=("docs/prs/${BRANCH_FILENAME}.md")
-  fi
+if [[ -d "docs/prs" ]] && [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
+  PR_FILE="docs/prs/${BRANCH_FILENAME}.md"
 fi
 
-if [[ ${#PR_FILES_FOUND[@]} -eq 0 ]]; then
+if [[ -z "$PR_FILE" ]]; then
   echo -e "${RED}❌ ERROR: No PR documentation found in docs/prs/${NC}"
   echo ""
-  echo "Expected PR file matching one of:"
-  echo "  docs/prs/${PR_PREFIX}-${EPIC_INFO}-*.md"
+  echo "Expected PR file:"
   echo "  docs/prs/${BRANCH_FILENAME}.md"
   echo ""
   echo "Create PR documentation before pushing:"
@@ -133,7 +109,7 @@ if [[ ${#PR_FILES_FOUND[@]} -eq 0 ]]; then
   exit 1
 fi
 
-echo -e "${GREEN}✅ Found PR documentation: ${PR_FILES_FOUND[0]}${NC}"
+echo -e "${GREEN}✅ Found PR documentation: ${PR_FILE}${NC}"
 
 # ============================================================================
 # CHECK 4: Verify PR file has required sections
@@ -141,20 +117,20 @@ echo -e "${GREEN}✅ Found PR documentation: ${PR_FILES_FOUND[0]}${NC}"
 echo ""
 echo -e "${YELLOW}[4/6] Validating PR documentation content...${NC}"
 
-PR_FILE="${PR_FILES_FOUND[0]}"
 PR_WARNINGS=()
 
-# Check for required sections
+# Check for required sections (standardized across all tools)
+# Required: ## Summary, ## Testing (or ## Quality Assurance), ## What Changed
 if ! grep -q "## Summary" "$PR_FILE"; then
   PR_WARNINGS+=("Missing '## Summary' section")
 fi
 
-if ! grep -q "## Quality Assurance" "$PR_FILE" && ! grep -q "## Testing" "$PR_FILE"; then
-  PR_WARNINGS+=("Missing '## Quality Assurance' or '## Testing' section")
+if ! grep -q "## Testing" "$PR_FILE" && ! grep -q "## Quality Assurance" "$PR_FILE"; then
+  PR_WARNINGS+=("Missing '## Testing' or '## Quality Assurance' section")
 fi
 
-if ! grep -q "## Files Changed" "$PR_FILE" && ! grep -q "## What Changed" "$PR_FILE"; then
-  PR_WARNINGS+=("Missing '## Files Changed' or '## What Changed' section")
+if ! grep -q "## What Changed" "$PR_FILE"; then
+  PR_WARNINGS+=("Missing '## What Changed' section")
 fi
 
 # Check for epic reference in PR file
@@ -261,10 +237,66 @@ else
 fi
 
 # ============================================================================
-# CHECK 6: Run full validation suite
+# CHECK 6: Markdown linting
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[6/6] Running full validation suite...${NC}"
+echo -e "${YELLOW}[6/7] Checking markdown files...${NC}"
+
+# Check if markdownlint is installed
+if command -v markdownlint &> /dev/null; then
+  # Find markdown files in repository (excluding node_modules, vendor, .claude/*, etc.)
+  MARKDOWN_FILES=$(find . -name "*.md" \
+    -not -path "*/node_modules/*" \
+    -not -path "*/vendor/*" \
+    -not -path "*/.git/*" \
+    -not -path "*/.claude/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/build/*" \
+    2>/dev/null || true)
+
+  if [[ -n "$MARKDOWN_FILES" ]]; then
+    # Run markdownlint with config if available
+    MARKDOWNLINT_CONFIG=""
+    if [[ -f ".markdownlint.json" ]]; then
+      MARKDOWNLINT_CONFIG="--config .markdownlint.json"
+    fi
+
+    # Capture markdownlint output
+    MARKDOWN_ERRORS=$(echo "$MARKDOWN_FILES" | xargs markdownlint $MARKDOWNLINT_CONFIG 2>&1 || true)
+
+    if [[ -n "$MARKDOWN_ERRORS" ]]; then
+      echo -e "${RED}❌ Markdown linting errors found${NC}"
+      echo ""
+      echo "$MARKDOWN_ERRORS"
+      echo ""
+      echo "To fix automatically:"
+      echo "  markdownlint --fix *.md docs/**/*.md"
+      echo ""
+      echo "To configure rules, edit .markdownlint.json"
+      echo ""
+      read -p "Continue with push anyway? (y/N) " -n 1 -r
+      echo
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Push cancelled. Fix markdown errors and try again.${NC}"
+        exit 1
+      fi
+      echo -e "${YELLOW}⚠️  Proceeding despite markdown errors${NC}"
+    else
+      echo -e "${GREEN}✅ All markdown files pass linting${NC}"
+    fi
+  else
+    echo -e "${BLUE}ℹ️  No markdown files found${NC}"
+  fi
+else
+  echo -e "${YELLOW}⚠️  markdownlint not installed - skipping markdown validation${NC}"
+  echo -e "${BLUE}ℹ️  Install with: npm install -g markdownlint-cli${NC}"
+fi
+
+# ============================================================================
+# CHECK 7: Run full validation suite
+# ============================================================================
+echo ""
+echo -e "${YELLOW}[7/7] Running full validation suite...${NC}"
 echo -e "${BLUE}ℹ️  This may take a moment - validating markdown, cross-references, and code blocks${NC}"
 echo ""
 
