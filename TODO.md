@@ -1,5 +1,7 @@
 # exchange-simulator-go TODO
 
+> **Note**: Completed milestones are archived in [TODO-HISTORY.md](./TODO-HISTORY.md). This file tracks active and future work.
+
 ## epic-TSE-0001: Foundation Services & Infrastructure
 
 ### 🏗️ Milestone TSE-0001.1a: Go Services Bootstrapping

@@ -20,11 +20,10 @@ echo ""
 # ============================================================================
 # CHECK 1: Required files exist
 # ============================================================================
-echo -e "${YELLOW}[1/6] Checking required files...${NC}"
+echo -e "${YELLOW}[1/7] Checking required files...${NC}"
 
 REQUIRED_FILES=(
   "README.md"
-  "TODO.md"
   "CONTRIBUTING.md"
   ".gitignore"
   ".validation_exceptions"
@@ -37,6 +36,12 @@ for file in "${REQUIRED_FILES[@]}"; do
   fi
 done
 
+# Check for TODO.md OR TODO-MASTER.md (either is acceptable)
+if [[ ! -f "TODO.md" ]] && [[ ! -f "TODO-MASTER.md" ]]; then
+  echo -e "${RED}❌ Missing required file: TODO.md or TODO-MASTER.md${NC}"
+  VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+fi
+
 if [[ $VALIDATION_ERRORS -eq 0 ]]; then
   echo -e "${GREEN}✅ All required files present${NC}"
 fi
@@ -45,7 +50,7 @@ fi
 # CHECK 2: Git quality standards plugin
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[2/6] Checking git quality standards plugin...${NC}"
+echo -e "${YELLOW}[2/7] Checking git quality standards plugin...${NC}"
 
 PLUGIN_DIR=".claude/plugins/git_quality_standards"
 REQUIRED_PLUGIN_FILES=(
@@ -66,133 +71,134 @@ if [[ $VALIDATION_ERRORS -eq 0 ]]; then
 fi
 
 # ============================================================================
-# CHECK 3: PR documentation exists for current branch
+# CHECK 3: Verify branch naming convention (current branch)
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[3/6] Checking for PR documentation...${NC}"
+echo -e "${YELLOW}[3/7] Checking current branch name...${NC}"
 
-# Get current branch name
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
 
-if [[ -z "$CURRENT_BRANCH" ]] || [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
-  echo -e "${YELLOW}⚠️  On main/master branch - PR documentation check skipped${NC}"
+# Skip check if on main/master (expected for initial setup)
+if [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
+    echo -e "${BLUE}ℹ️  On protected branch: $CURRENT_BRANCH${NC}"
 else
-  # Extract branch components
-  if [[ "$CURRENT_BRANCH" =~ ^([^/]+)/epic-([A-Z]{3})-([0-9]{4})(-(.+))?$ ]]; then
-    BRANCH_TYPE="${BASH_REMATCH[1]}"
-    EPIC_CODE="${BASH_REMATCH[2]}"
-    EPIC_NUM="${BASH_REMATCH[4]}"
-    EPIC_INFO="epic-${EPIC_CODE}-${BASH_REMATCH[3]}"
+    # Validate branch naming convention
+    # Format: type/epic-XXX-9999-milestone-behavior
+    BRANCH_REGEX="^(feature|fix|docs|style|refactor|test|chore|ci)/epic-([A-Z]{2,4})-([0-9]{4})-(.+)"
 
-    # Convert branch type to PR prefix
-    case "$BRANCH_TYPE" in
-      feature) PR_PREFIX="feat" ;;
-      fix) PR_PREFIX="fix" ;;
-      docs) PR_PREFIX="docs" ;;
-      style) PR_PREFIX="style" ;;
-      refactor) PR_PREFIX="refac" ;;
-      test) PR_PREFIX="test" ;;
-      chore) PR_PREFIX="chore" ;;
-      ci) PR_PREFIX="ci" ;;
-      *) PR_PREFIX="$BRANCH_TYPE" ;;
-    esac
+    if [[ "$CURRENT_BRANCH" =~ $BRANCH_REGEX ]]; then
+        echo -e "${GREEN}✅ Branch name follows convention: ${CURRENT_BRANCH}${NC}"
+        BRANCH_TYPE="${BASH_REMATCH[1]}"
+        EPIC_CODE="${BASH_REMATCH[2]}"
+        EPIC_NUM="${BASH_REMATCH[4]}"
+        EPIC_INFO="epic-${EPIC_CODE}-${BASH_REMATCH[3]}"
 
-    # Look for PR documentation matching current branch
-    PR_FILES_FOUND=()
-    if [[ -d "docs/prs" ]]; then
-      # Pattern 1: {prefix}-epic-XXX-9999-*.md
-      while IFS= read -r -d '' file; do
-        PR_FILES_FOUND+=("$file")
-      done < <(find docs/prs -name "${PR_PREFIX}-${EPIC_INFO}-*.md" -print0 2>/dev/null || true)
-
-      # Pattern 2: Full branch name with slashes replaced
-      BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
-      if [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
-        PR_FILES_FOUND+=("docs/prs/${BRANCH_FILENAME}.md")
-      fi
-    fi
-
-    if [[ ${#PR_FILES_FOUND[@]} -eq 0 ]]; then
-      echo -e "${RED}❌ ERROR: No PR documentation found for current branch${NC}"
-      echo -e "${BLUE}   Branch: $CURRENT_BRANCH${NC}"
-      echo -e "${BLUE}   Expected PR file matching one of:${NC}"
-      echo -e "${BLUE}     docs/prs/${PR_PREFIX}-${EPIC_INFO}-*.md${NC}"
-      echo -e "${BLUE}     docs/prs/${BRANCH_FILENAME}.md${NC}"
-      echo ""
-      echo -e "${BLUE}   Create PR documentation before pushing:${NC}"
-      echo -e "${BLUE}     mkdir -p docs/prs${NC}"
-      echo -e "${BLUE}     # Create and fill in PR documentation${NC}"
-      echo -e "${BLUE}     git add docs/prs/ && git commit -m 'docs: add PR documentation'${NC}"
-      VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
-
-      # List existing PR files to help user
-      if [[ -d "docs/prs" ]] && [[ -n "$(ls -A docs/prs/*.md 2>/dev/null)" ]]; then
-        echo ""
-        echo -e "${BLUE}   Existing PR files:${NC}"
-        ls -1 docs/prs/*.md 2>/dev/null | sed 's/^/     /' || true
-      fi
+        # Convert branch type to PR prefix
+        case "$BRANCH_TYPE" in
+          feature) PR_PREFIX="feat" ;;
+          fix) PR_PREFIX="fix" ;;
+          docs) PR_PREFIX="docs" ;;
+          style) PR_PREFIX="style" ;;
+          refactor) PR_PREFIX="refac" ;;
+          test) PR_PREFIX="test" ;;
+          chore) PR_PREFIX="chore" ;;
+          ci) PR_PREFIX="ci" ;;
+          *) PR_PREFIX="$BRANCH_TYPE" ;;
+        esac
+      
     else
-      echo -e "${GREEN}✅ Found PR documentation: ${PR_FILES_FOUND[0]}${NC}"
-
-      # ============================================================================
-      # CHECK 4: Validate PR documentation content
-      # ============================================================================
-      echo ""
-      echo -e "${YELLOW}[4/7] Validating PR documentation content...${NC}"
-
-      PR_FILE="${PR_FILES_FOUND[0]}"
-      PR_WARNINGS=()
-
-      # Check for required sections (standardized across all tools)
-      # Required: ## Summary, ## Testing (or ## Quality Assurance), ## What Changed
-      if ! grep -q "## Summary" "$PR_FILE"; then
-        PR_WARNINGS+=("Missing '## Summary' section")
-      fi
-
-      if ! grep -q "## Testing" "$PR_FILE" && ! grep -q "## Quality Assurance" "$PR_FILE"; then
-        PR_WARNINGS+=("Missing '## Testing' or '## Quality Assurance' section")
-      fi
-
-      if ! grep -q "## What Changed" "$PR_FILE"; then
-        PR_WARNINGS+=("Missing '## What Changed' section")
-      fi
-
-      # Check for epic reference in PR file
-      if [[ -n "$EPIC_INFO" ]]; then
-        if ! grep -qi "$EPIC_INFO" "$PR_FILE"; then
-          PR_WARNINGS+=("Epic reference '$EPIC_INFO' not found in PR file")
-        fi
-      fi
-
-      # Check for placeholder text (common in templates)
-      if grep -q "PLACEHOLDER" "$PR_FILE" || grep -q "TODO:" "$PR_FILE" || grep -q "FIXME:" "$PR_FILE"; then
-        PR_WARNINGS+=("Found placeholder text (PLACEHOLDER/TODO/FIXME) - ensure PR is complete")
-      fi
-
-      if [[ ${#PR_WARNINGS[@]} -gt 0 ]]; then
-        echo -e "${RED}❌ PR documentation content issues:${NC}"
-        for warning in "${PR_WARNINGS[@]}"; do
-          echo -e "  ${RED}•${NC} $warning"
-        done
-        echo ""
-        echo -e "${BLUE}   PR file: $PR_FILE${NC}"
-        VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
-      else
-        echo -e "${GREEN}✅ PR documentation has required sections${NC}"
-      fi
+        echo -e "${YELLOW}⚠️  Branch doesn't follow epic naming convention - PR check skipped${NC}"
+        echo -e "${BLUE}   Expected: type/epic-XXX-9999-milestone-behavior${NC}"
+        echo -e "${BLUE}   Actual: $CURRENT_BRANCH${NC}"
     fi
-  else
-    echo -e "${YELLOW}⚠️  Branch doesn't follow epic naming convention - PR check skipped${NC}"
-    echo -e "${BLUE}   Expected: type/epic-XXX-9999-description${NC}"
-    echo -e "${BLUE}   Actual: $CURRENT_BRANCH${NC}"
-  fi
 fi
 
 # ============================================================================
-# CHECK 5: GitHub Actions workflows
+# CHECK 4: PR documentation exists for current branch
 # ============================================================================
 echo ""
-echo -e "${YELLOW}[5/7] Checking GitHub Actions workflows...${NC}"
+echo -e "${YELLOW}[4/7] Checking for PR documentation...${NC}"
+
+if [[ -d "docs/prs" ]]; then
+  PR_COUNT=$(find docs/prs -name "*.md" -type f 2>/dev/null | wc -l)
+
+  if [[ $PR_COUNT -gt 0 ]]; then
+    echo -e "${GREEN}✅ Found $PR_COUNT PR documentation file(s)${NC}"
+
+    # Check if current branch has PR docs
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+    if [[ "$CURRENT_BRANCH" != "main" ]] && [[ "$CURRENT_BRANCH" != "master" ]] && [[ -n "$CURRENT_BRANCH" ]]; then
+      # Only check PR docs 
+      BRANCH_FILENAME=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
+      if [[ -f "docs/prs/${BRANCH_FILENAME}.md" ]]; then
+        echo -e "${GREEN}✅ Found PR documentation: ${BRANCH_FILENAME}.md${NC}"
+
+        # ============================================================================
+        # CHECK 5: Validate PR documentation content
+        # ============================================================================
+        echo ""
+        echo -e "${YELLOW}[5/7] Validating PR documentation content...${NC}"
+
+        PR_FILE="docs/prs/${BRANCH_FILENAME}.md"
+        PR_WARNINGS=()
+
+        # Check for required sections (standardized across all tools)
+        # Required: ## Summary, ## Testing (or ## Quality Assurance), ## What Changed
+        if ! grep -q "## Summary" "$PR_FILE"; then
+          PR_WARNINGS+=("Missing '## Summary' section")
+        fi
+
+        if ! grep -q "## Testing" "$PR_FILE" && ! grep -q "## Quality Assurance" "$PR_FILE"; then
+          PR_WARNINGS+=("Missing '## Testing' or '## Quality Assurance' section")
+        fi
+
+        if ! grep -q "## What Changed" "$PR_FILE"; then
+          PR_WARNINGS+=("Missing '## What Changed' section")
+        fi
+
+        # Check for epic reference in PR file
+        if [[ -n "$EPIC_INFO" ]]; then
+          if ! grep -qi "$EPIC_INFO" "$PR_FILE"; then
+            PR_WARNINGS+=("Epic reference '$EPIC_INFO' not found in PR file")
+          fi
+        fi
+
+        # Check for placeholder text (common in templates)
+        if grep -q "PLACEHOLDER" "$PR_FILE" || grep -q "TODO:" "$PR_FILE" || grep -q "FIXME:" "$PR_FILE"; then
+          PR_WARNINGS+=("Found placeholder text (PLACEHOLDER/TODO/FIXME) - ensure PR is complete")
+        fi
+
+        if [[ ${#PR_WARNINGS[@]} -gt 0 ]]; then
+          echo -e "${RED}❌ PR documentation content issues:${NC}"
+          for warning in "${PR_WARNINGS[@]}"; do
+            echo -e "  ${RED}•${NC} $warning"
+          done
+          echo ""
+          echo -e "${BLUE}   PR file: $PR_FILE${NC}"
+          VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+        else
+          echo -e "${GREEN}✅ PR documentation has required sections${NC}"
+        fi
+      else
+        echo -e "${YELLOW}⚠️  No PR documentation for current branch${NC}"
+        echo -e "${YELLOW}   Expected: docs/prs/${BRANCH_FILENAME}.md${NC}"
+        VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1)) 
+      fi
+    else
+      echo -e "${BLUE}ℹ️  On main/master branch - PR documentation check skipped${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  docs/prs/ directory exists but is empty${NC}"
+  fi
+else
+  echo -e "${YELLOW}ℹ️  docs/prs/ directory not found (PR documentation optional)${NC}"
+fi
+
+# ============================================================================
+# CHECK 6: GitHub Actions workflows
+# ============================================================================
+echo ""
+echo -e "${YELLOW}[6/7] Checking GitHub Actions workflows...${NC}"
 
 WORKFLOW_FILES=(
   ".github/workflows/pr-checks.yml"
@@ -210,19 +216,6 @@ if [[ -f ".github/workflows/pr-checks.yml" ]]; then
   echo -e "${GREEN}✅ GitHub Actions workflows configured${NC}"
 else
   echo -e "${YELLOW}⚠️  GitHub Actions not configured (optional)${NC}"
-fi
-
-# ============================================================================
-# CHECK 6: Documentation structure
-# ============================================================================
-echo ""
-echo -e "${YELLOW}[6/7] Checking documentation structure...${NC}"
-
-# Just verify docs directory structure exists
-if [[ -d "docs" ]]; then
-  echo -e "${GREEN}✅ Documentation directory structure present${NC}"
-else
-  echo -e "${YELLOW}⚠️  No docs/ directory (will be created when needed)${NC}"
 fi
 
 # ============================================================================
