@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ft-stock-picker"
+version = "0.1.0"
+description = "Agentic stock picker for the FT Stock Picking Game (constant-mix, 8-week season)"
+requires-python = ">=3.11"
+# Core (scoring, portfolio, signals) is stdlib-only and needs none of these.
+# The data/factor/backtest layers use them; install when you wire up live data.
+dependencies = []
+
+[project.optional-dependencies]
+data = [
+    "pandas>=2.0",
+    "yfinance>=0.2.40",
+    "duckdb>=1.0",        # optional cache backend (sqlite is used by default, stdlib)
+]
+llm = [
+    "anthropic>=0.69",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+picker = "picker.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["picker*"]

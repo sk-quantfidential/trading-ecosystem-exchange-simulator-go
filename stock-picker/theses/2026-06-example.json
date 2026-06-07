@@ -1,0 +1,25 @@
+{
+  "name": "2026-06 macro hypothesis (UNVERIFIED — a stance to TEST, not advice)",
+  "notes": "Encodes a user-stated macro view as tunable tilts: AI-selloff + inflation + oil/Iran. Multipliers >1 boost a name's signal score, <1 fade it, 0 exclude it. THIS IS A HYPOTHESIS. Backtest it on the constant-mix harness over recent rolling 8-week windows and compare vs the no-thesis baseline before trusting it. Note the internal tension: 'high oil' favours oil_beta, but 'problems resolve' implies oil FALLS (favouring oil consumers) — pick ONE coherent direction and set tilts accordingly. Tags must be assigned per-name in the universe CSV; sectors use GICS-style names.",
+  "include_only_sectors": null,
+  "exclude_sectors": [],
+  "sector_tilts": {
+    "Consumer Staples": 1.25,
+    "Health Care": 1.20,
+    "Utilities": 1.15,
+    "Energy": 1.15,
+    "Financials": 1.05,
+    "Information Technology": 0.80,
+    "Communication Services": 0.90
+  },
+  "tag_tilts": {
+    "ai_immune": 1.25,
+    "pricing_power": 1.20,
+    "oversold_quality": 1.15,
+    "oil_beta": 1.15,
+    "defensive_cashflow": 1.10,
+    "high_multiple_ai_capex": 0.65,
+    "ai_disruption_risk": 0.70,
+    "rate_sensitive_long_duration": 0.85
+  }
+}

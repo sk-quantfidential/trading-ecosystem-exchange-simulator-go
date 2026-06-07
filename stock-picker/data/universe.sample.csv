@@ -1,0 +1,13 @@
+ticker,name,exchange,currency,sector,tags
+AZN.L,AstraZeneca,LSE,GBP,Health Care,ai_immune;pricing_power;defensive_cashflow
+ULVR.L,Unilever,LSE,GBP,Consumer Staples,ai_immune;pricing_power;defensive_cashflow
+SHEL.L,Shell,LSE,GBP,Energy,oil_beta
+NG.L,National Grid,LSE,GBP,Utilities,ai_immune;rate_sensitive_long_duration
+DGE.L,Diageo,LSE,GBP,Consumer Staples,ai_immune;pricing_power
+KO,Coca-Cola,NYSE,USD,Consumer Staples,ai_immune;pricing_power;defensive_cashflow
+JNJ,Johnson & Johnson,NYSE,USD,Health Care,ai_immune;defensive_cashflow
+XOM,Exxon Mobil,NYSE,USD,Energy,oil_beta
+NVDA,NVIDIA,Nasdaq,USD,Information Technology,high_multiple_ai_capex
+MSFT,Microsoft,Nasdaq,USD,Information Technology,high_multiple_ai_capex
+NESN.SW,Nestle,SIX,CHF,Consumer Staples,ai_immune;pricing_power;defensive_cashflow
+SAP.DE,SAP,XETRA,EUR,Information Technology,ai_disruption_risk
