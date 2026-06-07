@@ -11,22 +11,39 @@
 - **Default stack:** **Python** for the picker brain (richest data/backtest/LLM ecosystem), with an optional path to integrate into your existing **Go** trading ecosystem later (see Phase 6). Rationale in §2.
 - **Definition of done (DoD)** is stated per phase — don't move on until it's green.
 
-### ⚠️ Phase 0, Step 0 — pin down the actual competition rules first
+### The actual FT Stock Picking Game rules (confirmed)
 
-Newspaper stock-picking competitions vary a lot, and the rules drive your whole design. Before writing code, get **written answers** to:
+Source: `stockpickinggame.ft.com/how-to-play`. These are the spec the whole system targets — keep a copy in `docs/competition-rules.md`.
 
-| Question | Why it changes the design |
-|---|---|
-| **Universe** — which exchange/index? (e.g. FTSE 350, FTSE All-Share, global, US-allowed?) | Defines your data sources and ticker symbology. |
-| **How many picks?** (a single stock? a basket of N?) | Single-pick → high-conviction; basket → portfolio construction matters. |
-| **Holding period** — fixed (a year/quarter) or rebalanced? | One-shot vs. ongoing rebalancing changes the whole agent loop. |
-| **Scoring** — total return? relative to benchmark? risk-adjusted? | You must replicate the scoring function exactly in your backtest. |
-| **Constraints** — long-only? min market cap? no investment trusts/ETFs? | Encode as hard filters on the universe. |
-| **Entry mechanics & deadline** — how/when do you submit? | Drives the automation in Phase 6. |
+| Rule | Value | Design impact |
+|---|---|---|
+| **Who** | Current FT subscriber; one portfolio per player | — |
+| **Starting capital** | **100,000 credits** (virtual) | Position values in credits; ranking by portfolio value. |
+| **Portfolio size** | **Minimum 5 stocks** | Hard floor; no single-pick mode. |
+| **Per-stock weight** | **5%–25%** each; weights sum to 100% (fully invested) | Hard box constraints on every weight. |
+| **Direction** | **Long-only** (you "buy"; no shorting) | No short leg to model. |
+| **Universe** | **Selected stocks from LSE, Nasdaq, NYSE, and main listings on other European exchanges** | Multi-exchange, **multi-currency**; you must maintain the eligible-stock list and per-exchange symbology. |
+| **Period** | **8-week season**; £1,000 to the top portfolio | Short horizon → favour short-term drivers. |
+| **Rebalancing** | **Allowed any day.** Changes queue and execute at **08:00 UK / the next day's opening price** (US names at US open) | A daily/weekly reweighting loop is a *core* feature, not optional. |
+| **Trading costs** | **None mentioned** (fee-free) | Frequent rebalancing has no fee drag *in the game* (real backtests still need fees — see Pitfalls). |
+| **Ranking** | Highest portfolio value (total return) at season end | Replicate this exact metric in Phase 0. |
 
-Write these into `docs/competition-rules.md` and treat that file as the spec the whole system targets. **The rest of this plan assumes the common format: pick a basket of N long-only equities from a defined index, held for a fixed period, ranked by total return.** Adjust where your rules differ.
+#### The scoring mechanic you must replicate exactly (this is the subtle part)
 
-> Reality check: this is a single-shot game with huge variance. A great process can lose to a lucky dart throw over one period. Optimise for a *defensible, repeatable edge* and for *learning*, not for guaranteeing first place.
+The game uses a **constant-weight, daily auto-rebalanced** portfolio — *not* buy-and-hold weight drift:
+
+- Each day, **portfolio daily return = Σ (target_weightᵢ × daily_returnᵢ)**.
+- Weights **reset to your targets at each day's close** ("automatically adjusted at the end of the trading day to maintain the same percentages... using the official closing price"). A 25% holding that rises 40% contributes **10% that day**, then snaps back to 25% — it does **not** drift to 35%.
+- **Base price rules** for each share's daily return:
+  - Held from the previous day → base = **previous close** (close-to-close return).
+  - Added or increased via reweighting → base = **that day's open** (open-to-close on the execution day, since the trade fills at open).
+  - Portfolio created intraday → base = next observed trade price.
+- **Season total return = Π(1 + daily_return) − 1.**
+- **Currency:** each share's return is a native-currency percentage; the rules show no FX conversion, so FX appears **neutralised** (a USD name up 2% contributes weight × 2% regardless of GBP/USD). *Flag to confirm in the live game before trusting it.*
+
+> Reality check: 8 weeks is short and noisy — a great process can still lose to luck. Over this horizon, **short-term momentum, catalysts, and earnings reactions matter more than slow value/quality factors**. Optimise for a defensible, repeatable edge and for *learning*, not for guaranteeing the prize.
+
+**Still worth confirming in the live game:** the exact eligible-stock list (and how to obtain it), the precise wording of the "total invested" constraint, any tie-break in ranking, and whether FX is genuinely neutralised.
 
 ---
 
@@ -49,6 +66,8 @@ An **agentic stock picker** is a loop where an LLM (Claude) does the *reasoning 
 ```
 
 You will build these in roughly the order **1 → 5 → 2 → 3 → 4 → 6** (baseline + evaluation first, intelligence second, automation last), because a baseline and an honest scoreboard are what let you tell whether the "agentic" part is actually adding value.
+
+Because the game allows **fee-free daily rebalancing** (executed next-day at the open) over an **8-week season**, the loop isn't "pick once and wait" — it's "pick, then reweight as the season unfolds." So the agent has two decisions: the **initial portfolio** and the **ongoing reweighting cadence** (e.g. a scheduled daily or twice-weekly run that reacts to news/earnings). Build the one-shot picker first, then add the rebalancing loop in Phase 6.
 
 ---
 
@@ -85,15 +104,19 @@ Set `ANTHROPIC_API_KEY` in your environment. The SDK reads it automatically.
 ## Phase 0 — Foundations & the scoring harness  *(Days 1–3)*
 
 **Learning objectives**
-- The data you can actually get, and its quirks (tickers, currencies, splits/dividends, total vs price return).
-- How the competition *scores* — and how to reproduce it exactly.
+- The data you can actually get, and its quirks: **open and close** prices (the game fills at open, re-weights at close), multi-exchange tickers/symbology (LSE `.L`, US, European), and currency handling (returns look FX-neutral — confirm).
+- How the competition *scores* — and how to reproduce the **constant-weight, daily auto-rebalanced** metric exactly.
 
 **Build**
-1. `data/prices.py` — pull adjusted daily prices for a list of tickers, cache to DuckDB/SQLite.
-2. `scoring.py` — given a basket and a start/end date, compute the **exact metric the competition uses** (e.g. equal-weighted total return). This is your source of truth for every later experiment.
-3. A tiny CLI: `python -m picker.score --tickers AZN.L,SHEL.L,... --from 2025-01-01 --to 2025-12-31`.
+1. `data/prices.py` — pull daily **open + close** prices for the eligible tickers across LSE/US/EU, cache to DuckDB/SQLite. Maintain the eligible-stock list as data.
+2. `scoring.py` — implement the game's mechanic, **not** equal-weighted buy-and-hold:
+   - Input: target weights `{ticker: w}` (each 5–25%, ≥5 names, Σ=100%) and a date range.
+   - For each trading day: `r_day = Σ wᵢ × rᵢ`, where `rᵢ` is **close-to-close** for held names and **open-to-close** on a name's entry/reweight day (base = that day's open).
+   - Weights **reset to target each day** (auto-rebalance at close).
+   - `season_return = Π(1 + r_day) − 1`.
+3. A tiny CLI: `python -m picker.score --weights weights.json --from 2025-01-01 --to 2025-02-26`.
 
-**DoD:** you can take any basket + date range and produce the competition's score number, and you've sanity-checked it by hand on 2 names.
+**DoD:** given any rules-valid weight set + 8-week window you reproduce the constant-mix total return, you've **hand-checked the 25%-up-40%→+10% example** from the rules, and you've confirmed a held name uses prev-close as base while a reweight-day name uses that day's open.
 
 ---
 
@@ -102,19 +125,19 @@ Set `ANTHROPIC_API_KEY` in your environment. The SDK reads it automatically.
 This is your **first competition-ready entry** and the **baseline every later version must beat**. No LLM yet — that's deliberate. If a simple factor screen beats your fancy agent, you need to know.
 
 **Learning objectives**
-- Factor investing basics: **value, momentum, quality, size, low-vol** — what each is and how to compute a simple proxy.
+- Factor investing basics: **value, momentum, quality, size, low-vol**. But weight them for the **8-week horizon** — over two months, **short-term momentum, post-earnings-announcement drift, and catalysts** tend to dominate slow value/quality signals.
 - Backtesting mechanics and its three deadly sins:
-  - **Lookahead bias** (using data you wouldn't have had at decision time),
+  - **Lookahead bias** (using data you wouldn't have had at decision time) — made concrete by the game's **decide-on-day-T, fill-at-T+1-open** rule, which you must model.
   - **Survivorship bias** (universe excludes delisted/failed names),
   - **Data snooping / overfitting** (tuning until the backtest looks great).
-- Benchmark-relative thinking (return vs the index, not just absolute).
+- Benchmark-relative thinking (return vs a relevant index, not just absolute).
 
 **Build**
-- `factors.py` — compute a composite score over the universe (e.g. z-score of 12-1 month momentum + earnings yield + ROE), point-in-time.
-- `baseline_pick.py` — rank by composite, take top N, output tickers + a one-line reason each.
-- `backtest.py` — walk the strategy over several historical periods, score each with `scoring.py`, compare to the index.
+- `factors.py` — compute a composite score over the eligible universe (e.g. z-score of short/medium-term momentum + an earnings-surprise / catalyst signal + a value or quality tilt), point-in-time.
+- `baseline_pick.py` — rank by composite, then emit a **rules-valid portfolio**: top names with weights in **[5%, 25%]**, **≥5 holdings**, **Σ = 100%** (start with equal-weight = 20% × 5, then tilt by score). Output tickers + weights + a one-line reason each.
+- `backtest.py` — walk the strategy over **rolling 8-week windows**, fill at next-day open, score each with the constant-mix `scoring.py`, compare to a benchmark.
 
-**DoD:** a reproducible backtest report (CSV + a chart) showing baseline vs benchmark across ≥5 historical windows, with a written paragraph on where it wins/loses and *why you don't fully trust the number* (list the biases that remain).
+**DoD:** a reproducible backtest report (CSV + chart) over ≥5 rolling 8-week windows where every tested portfolio satisfies the weight/size constraints and fills at T+1 open, plus a written paragraph on where it wins/loses and *why you don't fully trust the number* (list the residual biases).
 
 ---
 
@@ -222,7 +245,7 @@ Move from "rank some stocks" to "construct a defensible portfolio under the comp
 **Build**
 - Per candidate: bull case → bear case → synthesis (you can run bull/bear cheaply on Haiku, synthesis on Opus).
 - A PM step that takes the surviving names + the rules and emits a sized portfolio + memos.
-- Encode the competition constraints from `competition-rules.md` as explicit checks the PM output must satisfy.
+- Encode the competition constraints as explicit, programmatic checks the PM output **must** pass before it's accepted: **≥5 holdings**, every weight in **[5%, 25%]**, weights **sum to 100%**, **long-only**, all tickers in the **eligible universe**. Reject-and-retry if the LLM proposes an invalid set (don't trust it to self-enforce arithmetic).
 
 > If you want the orchestration managed for you rather than hand-rolling the loop, Anthropic's **Managed Agents** can run a coordinator + sub-agents (bull/bear/risk) server-side. Optional — only reach for it once the hand-rolled version works and you want less plumbing.
 
@@ -260,7 +283,8 @@ Turn it into something you actually run each competition cycle, and that improve
 
 **Build**
 - `run_cycle.py` — produce the formatted competition entry + an investment-committee report.
-- A **journal** (DuckDB table or memory store): picks, rationale, scores, and a post-cycle reflection write-up.
+- **The rebalancing loop** — a scheduled run (e.g. each evening, before the 08:00 UK execution) that re-reads news/prices, decides whether to reweight, and emits an updated rules-valid weight set. Since the game is fee-free, the discipline is "change weights only when the thesis or evidence changes," not churn for its own sake — bake that judgement into the PM agent and log the reason for every change.
+- A **journal** (DuckDB table or memory store): picks, weights, rationale, every reweight + its trigger, scores, and a post-cycle reflection write-up.
 - A reflection step: at period end, the agent reviews what worked, writes lessons to memory, and those lessons become context for the next cycle.
 
 **Optional — integrate with your Go trading-ecosystem:**
@@ -279,9 +303,11 @@ Keep this list visible; most failures are one of these.
 2. **Survivorship bias** — testing only on companies that still exist today flatters every strategy.
 3. **Overfitting / data snooping** — tuning until the backtest sparkles; it won't generalise. Fewer knobs, out-of-sample discipline.
 4. **LLM hallucinated financials** — the model "remembering" a P/E or a revenue figure. Ground every number in a tool; forbid memory-sourced facts in the prompt.
-5. **Single-shot variance** — one period is mostly noise. A sound process can lose; don't over-update on one result.
-6. **Costs & liquidity** — spreads, fees, and thin small-caps erode paper returns.
-7. **Cost blowups (API)** — running Opus over hundreds of candidates. Use Haiku for bulk steps, prompt caching for stable context, and cache all market data locally.
+5. **Wrong scoring model in the backtest** — the game is **constant-weight daily-rebalanced**, not buy-and-hold. If your backtest lets winners' weights drift, your numbers won't match the game. Score every experiment with the Phase-0 constant-mix harness.
+6. **Short-horizon variance** — an 8-week season is noisy; a sound process can still lose. Don't over-update on one season's result. Daily rebalancing reduces, but doesn't remove, the luck component.
+7. **Costs & liquidity** — the *game* is fee-free, so don't penalise rebalancing in game-scoring. But any backtest you'd trust for the *real world* must include spreads/fees/slippage — keep the two modes separate and don't let fee-free habits leak into real conclusions.
+8. **Trusting the LLM with arithmetic** — weights summing to 100%, the 5–25% box, the ≥5-name floor: validate these in code and reject-and-retry, never trust the model to get the maths right.
+9. **Cost blowups (API)** — running Opus over hundreds of candidates, *every day* if you rebalance. Use Haiku for bulk steps, prompt caching for stable context/dossiers, cache all market data locally, and only escalate to Opus for the final judgement/PM step.
 
 ---
 
@@ -297,9 +323,9 @@ Ship something runnable every week. Keep `docs/competition-rules.md` and a runni
 
 ## Quick-start checklist
 
-- [ ] Get the competition rules in writing → `docs/competition-rules.md`
-- [ ] Python env (`uv`/`poetry`), `ANTHROPIC_API_KEY` set, market-data account
-- [ ] Phase 0: prices puller + scoring harness (reproduce the competition metric)
+- [ ] Copy the confirmed rules into `docs/competition-rules.md`; confirm the open items (eligible-stock list, FX neutralisation, tie-breaks) in the live game
+- [ ] Python env (`uv`/`poetry`), `ANTHROPIC_API_KEY` set, multi-exchange market-data source (open+close)
+- [ ] Phase 0: prices puller + **constant-mix** scoring harness (hand-check the 25%→+40%→+10% example)
 - [ ] Phase 1: deterministic factor baseline + honest backtest
 - [ ] Phase 2: single Claude agent with tool use + structured picks
 - [ ] Phase 3: dossiers (filings/news) + web search + prompt caching
