@@ -62,6 +62,12 @@ picker/
   baseline_pick.py    # Phase 1: candidates -> rules-valid portfolio
   backtest.py         # rolling 8-week windows, strict T+1-open fills
   factors.py          # optional pandas cross-sectional factors
+  agent/              # Phase 2: Claude tool-use research agent
+    schema.py         #   structured-output schema + parse/validate + picks->weights
+    provider.py       #   DataProvider (DictDataProvider / PanelDataProvider)
+    tools.py          #   4 grounded tools + dispatch (facts in, no free-text invention)
+    prompts.py        #   system/user prompts (grounding + 8-week + lag rules)
+    runner.py         #   LLMClient (AnthropicClient | ScriptedLLMClient) + ResearchAgent
   data/
     universe.py       # eligible-stock list (CSV)
     prices.py         # yfinance fetch + sqlite cache + stdlib CSV panel I/O
@@ -93,10 +99,35 @@ rolling windows before trusting it.
 resolve" implies oil *falls* (rewarding oil *consumers* — transport, chemicals,
 airlines). Pick one coherent direction and set the tilts to match; don't bet on both.
 
+## Phase 2: the research agent (`picker/agent/`)
+
+A single Claude agent (Opus 4.8, adaptive thinking) researches each candidate via
+four grounded tools, then returns **structured picks** (conviction 1-5, thesis,
+key risks, and tool-sourced `evidence`). `picks_to_weights` turns them into a
+rules-valid portfolio.
+
+Two design choices make it usable **before** you have data or API keys:
+- **`LLMClient` is an interface.** `ScriptedLLMClient` drives the full loop offline
+  in tests; `AnthropicClient` runs it live (lazy SDK import — the package imports
+  fine without `anthropic`). The loop logic is therefore tested with no network.
+- **Tools read a `DataProvider`.** The model only ever sees tool output, never a
+  channel to invent numbers; missing data returns an explicit `"unknown"` so the
+  model lowers conviction instead of hallucinating. Providers also enforce the
+  next-day-open lag (news/prices pre-filtered to the decision date).
+
+Run it live once you have data + a key:
+
+```bash
+pip install -e '.[data,llm]'
+export ANTHROPIC_API_KEY=...
+picker research --panel prices.csv --n 5 --scheme tilt   # research -> validated picks -> weights
+```
+
 ## Next steps (from the study plan)
 
-- Phase 2: replace/augment `selector` with a Claude tool-use agent that writes a
-  thesis per candidate, grounded in tool data (structured-output picks).
-- Phase 5: walk-forward evaluation + an ablation scorecard (does the thesis/agent beat
-  this deterministic baseline, net of cost?).
+- Phase 3: dossiers (filings/news) + `web_search`/`web_fetch` server tools + prompt
+  caching, feeding richer context into the same agent.
+- Phase 5: walk-forward evaluation + an ablation scorecard — does the agent beat the
+  deterministic baseline, net of API cost? (Wire the agent as a `weight_fn` into
+  `backtest.py` using a `PanelDataProvider` at each decision date.)
 - Phase 6: scheduled rebalancing loop + journal/reflection.

@@ -83,6 +83,33 @@ def cmd_select(args) -> None:
         print(c.rationale)
 
 
+def cmd_research(args) -> None:
+    """Run the Phase-2 research agent over a panel (needs ANTHROPIC_API_KEY + .[llm])."""
+    from .agent import PanelDataProvider, ResearchAgent, ToolKit, picks_to_weights
+    from .agent.runner import default_live_client
+
+    panel = _load_aligned_panel(args.panel)
+    first = next(iter(panel))
+    as_of_index = args.as_of_index if args.as_of_index is not None else len(panel[first]["dates"]) - 1
+    as_of = date.fromisoformat(panel[first]["dates"][as_of_index])
+
+    provider = PanelDataProvider(panel, as_of_index=as_of_index, as_of=as_of)
+    agent = ResearchAgent(default_live_client(), ToolKit(provider))
+    outcome = agent.run(provider.candidates(), as_of=as_of, target_picks=args.target_picks)
+
+    for p in outcome.result.picks:
+        print(f"[{p.conviction}/5] {p.ticker} (h={p.horizon_weeks}w): {p.thesis}")
+        print(f"      risks: {p.key_risks}")
+        print(f"      evidence: {p.evidence}")
+    if outcome.errors:
+        print("\nVALIDATION ERRORS (model output is not rules-valid):")
+        for e in outcome.errors:
+            print(f"  - {e}")
+    else:
+        weights = picks_to_weights(outcome.result, n=args.n, scheme=args.scheme)
+        print(f"\nrules-valid portfolio: {json.dumps(weights)}")
+
+
 def cmd_fetch(args) -> None:
     tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
     panel = P.fetch_prices(tickers, args.start, args.end)
@@ -116,6 +143,14 @@ def main(argv: list[str] | None = None) -> int:
     sl.add_argument("--thesis")
     sl.add_argument("--top-n", dest="top_n", type=int, default=20)
     sl.set_defaults(func=cmd_select)
+
+    r = sub.add_parser("research", help="Phase-2 agent: research a panel -> picks (needs .[llm] + key)")
+    r.add_argument("--panel", required=True)
+    r.add_argument("--as-of-index", dest="as_of_index", type=int, default=None)
+    r.add_argument("--target-picks", dest="target_picks", type=int, default=8)
+    r.add_argument("--n", type=int, default=5)
+    r.add_argument("--scheme", default="tilt", choices=["equal", "tilt"])
+    r.set_defaults(func=cmd_research)
 
     f = sub.add_parser("fetch", help="fetch open/close via yfinance (needs .[data])")
     f.add_argument("--tickers", required=True)

@@ -21,6 +21,7 @@ TEST_MODULES = [
     "tests.test_portfolio",
     "tests.test_signals",
     "tests.test_backtest",
+    "tests.test_agent",
 ]
 
 
